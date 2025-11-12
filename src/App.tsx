@@ -8,6 +8,7 @@ import { GoogleSignIn } from './components/GoogleSignIn';
 import { StorageService } from './services/storageService';
 import { PDFService } from './services/pdfService';
 import { GeminiService } from './services/geminiService';
+import { SlidesService } from './services/slidesService';
 import { GoogleAuthService, type GoogleAuthState } from './services/googleAuthService';
 import type { Theme, ActualTheme, ProcessingStatus, ParsedCV, CandidateData, ProcessingError, GeminiModel } from './types';
 
@@ -38,7 +39,11 @@ function App() {
     userEmail: null,
   });
 
-  // Initialize Google Auth on mount
+  // Slides generation state
+  const [generatedSlidesUrl, setGeneratedSlidesUrl] = useState<string | null>(null);
+  const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
+
+  // Initialize Google Auth and Slides API on mount
   useEffect(() => {
     GoogleAuthService.initialize()
       .then(() => {
@@ -46,6 +51,13 @@ function App() {
         // Set up auth state change listener
         GoogleAuthService.onAuthStateChange((state) => {
           setGoogleAuth(state);
+
+          // Initialize Slides API when authenticated
+          if (state.isAuthenticated) {
+            SlidesService.initialize()
+              .then(() => console.log('✅ Google Slides API initialized'))
+              .catch((error) => console.error('❌ Failed to initialize Slides API:', error));
+          }
         });
       })
       .catch((error) => {
@@ -137,6 +149,7 @@ function App() {
     setParsedCVs([]);
     setExtractedCandidates([]);
     setFailedExtractions([]);
+    setGeneratedSlidesUrl(null);
     setProcessingStatus('idle');
   };
 
@@ -220,6 +233,45 @@ function App() {
       console.error('❌ Error during processing:', error);
       setProcessingStatus('error');
       alert('Error during processing: ' + (error as Error).message);
+    }
+  };
+
+  // Generate Google Slides handler
+  const handleGenerateSlides = async () => {
+    if (!googleAuth.isAuthenticated) {
+      alert('Please sign in with Google first');
+      return;
+    }
+
+    if (extractedCandidates.length === 0) {
+      alert('No candidates to generate slides for');
+      return;
+    }
+
+    try {
+      setIsGeneratingSlides(true);
+      setProcessingStatus('generating');
+      console.log(`📊 Generating Google Slides for ${extractedCandidates.length} candidates...`);
+
+      const result = await SlidesService.createPresentation(
+        extractedCandidates,
+        `CV Candidates - ${new Date().toLocaleDateString()}`
+      );
+
+      if (result.success && result.presentationUrl) {
+        setGeneratedSlidesUrl(result.presentationUrl);
+        setProcessingStatus('done');
+        console.log(`✅ Presentation created: ${result.presentationUrl}`);
+      } else {
+        throw new Error(result.error || 'Failed to create presentation');
+      }
+
+    } catch (error) {
+      console.error('❌ Error generating slides:', error);
+      setProcessingStatus('error');
+      alert('Error generating slides: ' + (error as Error).message);
+    } finally {
+      setIsGeneratingSlides(false);
     }
   };
 
@@ -431,6 +483,90 @@ function App() {
         </div>
       )}
 
+      {/* Generate Slides Button */}
+      {extractedCandidates.length > 0 && !generatedSlidesUrl && (
+        <div style={{
+          padding: '1.5rem',
+          border: `2px solid ${borderColor}`,
+          background: bgColor,
+          boxShadow: `4px 4px 0px ${borderColor}`,
+          marginBottom: '1.5rem',
+          textAlign: 'center'
+        }}>
+          <button
+            onClick={handleGenerateSlides}
+            disabled={!googleAuth.isAuthenticated || isGeneratingSlides}
+            style={{
+              padding: '1rem 2rem',
+              background: 'none',
+              border: `2px solid ${borderColor}`,
+              color: textColor,
+              fontFamily: 'Courier New, monospace',
+              fontWeight: 'bold',
+              cursor: (googleAuth.isAuthenticated && !isGeneratingSlides) ? 'pointer' : 'not-allowed',
+              letterSpacing: '0.1em',
+              fontSize: '1rem',
+              opacity: (googleAuth.isAuthenticated && !isGeneratingSlides) ? 1 : 0.5
+            }}
+          >
+            {isGeneratingSlides ? '[ ⏳ GENERATING... ]' : '[ 📊 GENERATE GOOGLE SLIDES ]'}
+          </button>
+          <div style={{
+            fontSize: '0.75rem',
+            opacity: 0.6,
+            marginTop: '0.5rem',
+            color: textColor
+          }}>
+            {googleAuth.isAuthenticated
+              ? `Create presentation with ${extractedCandidates.length} candidates`
+              : 'Sign in with Google to generate slides'}
+          </div>
+        </div>
+      )}
+
+      {/* Generated Slides URL */}
+      {generatedSlidesUrl && (
+        <div style={{
+          padding: '1.5rem',
+          border: `2px solid #4CAF50`,
+          background: bgColor,
+          boxShadow: `4px 4px 0px #4CAF50`,
+          marginBottom: '1.5rem'
+        }}>
+          <div style={{
+            fontSize: '0.875rem',
+            fontWeight: 'bold',
+            marginBottom: '1rem',
+            letterSpacing: '0.1em',
+            color: '#4CAF50'
+          }}>
+            [ ✅ PRESENTATION CREATED ]
+          </div>
+          <a
+            href={generatedSlidesUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: '#4CAF50',
+              textDecoration: 'underline',
+              fontSize: '0.875rem',
+              fontFamily: 'Courier New, monospace',
+              wordBreak: 'break-all'
+            }}
+          >
+            {generatedSlidesUrl}
+          </a>
+          <div style={{
+            fontSize: '0.75rem',
+            opacity: 0.6,
+            marginTop: '0.5rem',
+            color: textColor
+          }}>
+            Click to open in Google Slides
+          </div>
+        </div>
+      )}
+
       {failedExtractions.length > 0 && (
         <div style={{
           padding: '1.5rem',
@@ -478,7 +614,7 @@ function App() {
       )}
 
       <div className="footer">
-        [ Phase 2 Progress: ✅ PDF Parsing | ✅ Gemini Extraction | ⏳ Google Slides Generation ]
+        [ Phase 2: ✅ PDF Parsing | ✅ Gemini Extraction | ✅ Google Slides | Ready to Test! ]
       </div>
     </div>
   );
