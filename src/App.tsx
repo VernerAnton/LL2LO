@@ -6,11 +6,12 @@ import { FileUploader } from './components/FileUploader';
 import { ProgressIndicator } from './components/ProgressIndicator';
 import { StorageService } from './services/storageService';
 import { PDFService } from './services/pdfService';
-import type { Theme, ProcessingStatus, ParsedCV } from './types';
+import type { Theme, ActualTheme, ProcessingStatus, ParsedCV } from './types';
 
 function App() {
-  // Theme state
-  const [theme, setTheme] = useState<Theme>(() => StorageService.getTheme());
+  // Theme state - track both preference and actual theme
+  const [themePreference, setThemePreference] = useState<Theme>(() => StorageService.getTheme());
+  const [actualTheme, setActualTheme] = useState<ActualTheme>(() => StorageService.getActualTheme());
 
   // API key state
   const [geminiApiKey, setGeminiApiKey] = useState<string | null>(() =>
@@ -24,16 +25,54 @@ function App() {
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
 
-  // Update body class when theme changes
+  // Update body class when actual theme changes
   useEffect(() => {
-    document.body.className = `${theme}-mode`;
-  }, [theme]);
+    document.body.className = `${actualTheme}-mode`;
+  }, [actualTheme]);
 
-  // Theme toggle handler
+  // Listen for system theme changes when in 'system' mode
+  useEffect(() => {
+    if (themePreference !== 'system') {
+      return; // Only listen when in auto mode
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+      const newActualTheme: ActualTheme = e.matches ? 'dark' : 'light';
+      setActualTheme(newActualTheme);
+    };
+
+    // Add listener for system theme changes
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+
+    // Cleanup listener on unmount or when preference changes
+    return () => {
+      mediaQuery.removeEventListener('change', handleSystemThemeChange);
+    };
+  }, [themePreference]);
+
+  // Theme toggle handler - cycles through: system → light → dark → system
   const handleThemeToggle = () => {
-    const newTheme: Theme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    StorageService.saveTheme(newTheme);
+    let newPreference: Theme;
+
+    if (themePreference === 'system') {
+      newPreference = 'light';
+    } else if (themePreference === 'light') {
+      newPreference = 'dark';
+    } else {
+      newPreference = 'system';
+    }
+
+    setThemePreference(newPreference);
+    StorageService.saveTheme(newPreference);
+
+    // Update actual theme
+    if (newPreference === 'system') {
+      setActualTheme(StorageService.getActualTheme());
+    } else {
+      setActualTheme(newPreference);
+    }
   };
 
   // API key handlers
@@ -92,16 +131,20 @@ function App() {
     }
   };
 
-  const borderColor = theme === 'dark' ? '#e0e0e0' : '#2a2a2a';
-  const bgColor = theme === 'dark' ? '#2a2a2a' : '#fefdfb';
-  const textColor = theme === 'dark' ? '#e0e0e0' : '#2a2a2a';
+  const borderColor = actualTheme === 'dark' ? '#e0e0e0' : '#2a2a2a';
+  const bgColor = actualTheme === 'dark' ? '#2a2a2a' : '#fefdfb';
+  const textColor = actualTheme === 'dark' ? '#e0e0e0' : '#2a2a2a';
 
   const canProcess = uploadedFile && geminiApiKey && processingStatus === 'idle';
 
   return (
     <div className="container">
       <div className="header">
-        <ThemeToggle theme={theme} onToggle={handleThemeToggle} />
+        <ThemeToggle
+          themePreference={themePreference}
+          actualTheme={actualTheme}
+          onToggle={handleThemeToggle}
+        />
         <div className="title">════ LL2PP ════</div>
         <div style={{ width: '80px' }}></div>
       </div>
@@ -114,12 +157,12 @@ function App() {
         existingKey={geminiApiKey}
         onSave={handleSaveApiKey}
         onRemove={handleRemoveApiKey}
-        theme={theme}
+        theme={actualTheme}
       />
 
       <FileUploader
         onFileSelect={handleFileSelect}
-        theme={theme}
+        theme={actualTheme}
         disabled={processingStatus !== 'idle' && processingStatus !== 'done' && processingStatus !== 'error'}
       />
 
@@ -127,7 +170,7 @@ function App() {
         status={processingStatus}
         current={progressCurrent}
         total={progressTotal}
-        theme={theme}
+        theme={actualTheme}
       />
 
       {uploadedFile && geminiApiKey && (
@@ -192,7 +235,7 @@ function App() {
                 padding: '1rem',
                 border: `1px solid ${borderColor}`,
                 marginBottom: '0.5rem',
-                background: theme === 'dark' ? '#1a1a1a' : '#fff'
+                background: actualTheme === 'dark' ? '#1a1a1a' : '#fff'
               }}
             >
               <div style={{
