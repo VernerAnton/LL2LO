@@ -9,11 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "pdfjs-dist": "^4.0.379",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "pdfjs-dist": "^4.0.379"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@types/gapi": "^0.0.47",
+    "@types/gapi.auth2": "^0.0.61",
+    "@types/gapi.client.slides": "^1.0.4",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
