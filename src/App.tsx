@@ -5,6 +5,7 @@ import { ApiKeyInput } from './components/ApiKeyInput';
 import { FileUploader } from './components/FileUploader';
 import { ProgressIndicator } from './components/ProgressIndicator';
 import { GoogleSignIn } from './components/GoogleSignIn';
+import { ManualCopyOutput } from './components/ManualCopyOutput';
 import { StorageService } from './services/storageService';
 import { PDFService } from './services/pdfService';
 import { GeminiService } from './services/geminiService';
@@ -481,6 +482,14 @@ function App() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Manual Copy Output */}
+      {extractedCandidates.length > 0 && (
+        <ManualCopyOutput
+          candidates={extractedCandidates}
+          theme={actualTheme}
+        />
       )}
 
       {/* Generate Slides Button */}
