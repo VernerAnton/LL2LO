@@ -4,8 +4,10 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { ApiKeyInput } from './components/ApiKeyInput';
 import { FileUploader } from './components/FileUploader';
 import { ProgressIndicator } from './components/ProgressIndicator';
+import { GoogleSignIn } from './components/GoogleSignIn';
 import { StorageService } from './services/storageService';
 import { PDFService } from './services/pdfService';
+import { GoogleAuthService, type GoogleAuthState } from './services/googleAuthService';
 import type { Theme, ActualTheme, ProcessingStatus, ParsedCV } from './types';
 
 function App() {
@@ -24,6 +26,28 @@ function App() {
   const [parsedCVs, setParsedCVs] = useState<ParsedCV[]>([]);
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
+
+  // Google auth state
+  const [googleAuth, setGoogleAuth] = useState<GoogleAuthState>({
+    isAuthenticated: false,
+    accessToken: null,
+    userEmail: null,
+  });
+
+  // Initialize Google Auth on mount
+  useEffect(() => {
+    GoogleAuthService.initialize()
+      .then(() => {
+        console.log('✅ Google Auth initialized');
+        // Set up auth state change listener
+        GoogleAuthService.onAuthStateChange((state) => {
+          setGoogleAuth(state);
+        });
+      })
+      .catch((error) => {
+        console.error('❌ Failed to initialize Google Auth:', error);
+      });
+  }, []);
 
   // Update body class when actual theme changes
   useEffect(() => {
@@ -84,6 +108,15 @@ function App() {
   const handleRemoveApiKey = () => {
     setGeminiApiKey(null);
     StorageService.removeGeminiKey();
+  };
+
+  // Google auth handlers
+  const handleGoogleSignIn = () => {
+    GoogleAuthService.signIn();
+  };
+
+  const handleGoogleSignOut = () => {
+    GoogleAuthService.signOut();
   };
 
   // File upload handler
@@ -157,6 +190,14 @@ function App() {
         existingKey={geminiApiKey}
         onSave={handleSaveApiKey}
         onRemove={handleRemoveApiKey}
+        theme={actualTheme}
+      />
+
+      <GoogleSignIn
+        isAuthenticated={googleAuth.isAuthenticated}
+        userEmail={googleAuth.userEmail}
+        onSignIn={handleGoogleSignIn}
+        onSignOut={handleGoogleSignOut}
         theme={actualTheme}
       />
 
