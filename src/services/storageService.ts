@@ -37,10 +37,27 @@ export class StorageService {
 
   /**
    * Get theme preference
+   * Priority: 1) User's saved preference, 2) System preference, 3) Default to dark
    */
   static getTheme(): 'light' | 'dark' {
     const stored = localStorage.getItem(STORAGE_KEYS.THEME);
-    return stored === 'light' ? 'light' : 'dark'; // Default to dark
+
+    // If user has explicitly set a preference, use it
+    if (stored === 'light' || stored === 'dark') {
+      return stored;
+    }
+
+    // Otherwise, detect system preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark';
+    }
+
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      return 'light';
+    }
+
+    // Final fallback: dark mode (for Finland winters 🌙)
+    return 'dark';
   }
 
   /**
