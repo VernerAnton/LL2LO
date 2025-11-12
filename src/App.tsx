@@ -7,8 +7,9 @@ import { ProgressIndicator } from './components/ProgressIndicator';
 import { GoogleSignIn } from './components/GoogleSignIn';
 import { StorageService } from './services/storageService';
 import { PDFService } from './services/pdfService';
+import { GeminiService } from './services/geminiService';
 import { GoogleAuthService, type GoogleAuthState } from './services/googleAuthService';
-import type { Theme, ActualTheme, ProcessingStatus, ParsedCV } from './types';
+import type { Theme, ActualTheme, ProcessingStatus, ParsedCV, CandidateData, ProcessingError, GeminiModel } from './types';
 
 function App() {
   // Theme state - track both preference and actual theme
@@ -24,8 +25,11 @@ function App() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>('idle');
   const [parsedCVs, setParsedCVs] = useState<ParsedCV[]>([]);
+  const [extractedCandidates, setExtractedCandidates] = useState<CandidateData[]>([]);
+  const [failedExtractions, setFailedExtractions] = useState<ProcessingError[]>([]);
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
+  const [selectedModel] = useState<GeminiModel>('gemini-2.5-flash');
 
   // Google auth state
   const [googleAuth, setGoogleAuth] = useState<GoogleAuthState>({
@@ -48,6 +52,14 @@ function App() {
         console.error('❌ Failed to initialize Google Auth:', error);
       });
   }, []);
+
+  // Initialize Gemini when API key is available
+  useEffect(() => {
+    if (geminiApiKey) {
+      GeminiService.initialize(geminiApiKey);
+      console.log('✅ Gemini AI initialized');
+    }
+  }, [geminiApiKey]);
 
   // Update body class when actual theme changes
   useEffect(() => {
@@ -123,10 +135,12 @@ function App() {
   const handleFileSelect = async (file: File) => {
     setUploadedFile(file);
     setParsedCVs([]);
+    setExtractedCandidates([]);
+    setFailedExtractions([]);
     setProcessingStatus('idle');
   };
 
-  // Parse PDF handler
+  // Parse PDF and extract data handler
   const handleParsePDF = async () => {
     if (!uploadedFile) {
       alert('Please upload a PDF file first');
@@ -139,28 +153,73 @@ function App() {
     }
 
     try {
+      // Step 1: Parse PDF
       setProcessingStatus('parsing');
       setProgressCurrent(0);
       setProgressTotal(0);
 
+      console.log('📄 Parsing PDF...');
       const cvs = await PDFService.parseAndSplit(uploadedFile);
 
       setParsedCVs(cvs);
       setProgressTotal(cvs.length);
+
+      console.log(`✅ Parsing complete! Found ${cvs.length} CVs`);
+
+      // Step 2: Extract data using Gemini AI
+      setProcessingStatus('extracting');
+      setProgressCurrent(0);
+
+      const candidates: CandidateData[] = [];
+      const errors: ProcessingError[] = [];
+
+      console.log(`🤖 Starting Gemini extraction for ${cvs.length} CVs...`);
+
+      for (let i = 0; i < cvs.length; i++) {
+        const cv = cvs[i];
+        console.log(`\n🔍 Extracting CV ${i + 1}/${cvs.length}...`);
+
+        setProgressCurrent(i + 1);
+
+        const result = await GeminiService.extractCVData(cv.text, selectedModel);
+
+        if (result.success && result.data) {
+          candidates.push(result.data);
+          console.log(`✅ Extracted: ${result.data.name}`);
+          console.log(`   - Work history: ${result.data.workHistory.length} entries`);
+          console.log(`   - Education: ${result.data.education.length} entries`);
+        } else {
+          const error: ProcessingError = {
+            candidateIndex: i,
+            error: result.error || 'Unknown error',
+            rawText: cv.text,
+          };
+          errors.push(error);
+          console.error(`❌ Failed to extract CV ${i + 1}: ${result.error}`);
+        }
+      }
+
+      setExtractedCandidates(candidates);
+      setFailedExtractions(errors);
       setProcessingStatus('done');
 
-      console.log('✅ Parsing complete!');
-      console.log(`Found ${cvs.length} CVs`);
-      cvs.forEach((cv, index) => {
-        console.log(`\nCV ${index + 1}:`);
-        console.log(`Pages: ${cv.pageNumbers.join(', ')}`);
-        console.log(`Text preview: ${cv.text.substring(0, 200)}...`);
-      });
+      console.log('\n════════════════════════════════════════');
+      console.log(`✅ Extraction complete!`);
+      console.log(`   - Successful: ${candidates.length}/${cvs.length}`);
+      console.log(`   - Failed: ${errors.length}/${cvs.length}`);
+      console.log('════════════════════════════════════════');
+
+      if (errors.length > 0) {
+        console.warn('\n⚠️ Failed extractions:');
+        errors.forEach((err) => {
+          console.warn(`   CV ${err.candidateIndex + 1}: ${err.error}`);
+        });
+      }
 
     } catch (error) {
-      console.error('❌ Error parsing PDF:', error);
+      console.error('❌ Error during processing:', error);
       setProcessingStatus('error');
-      alert('Error parsing PDF: ' + (error as Error).message);
+      alert('Error during processing: ' + (error as Error).message);
     }
   };
 
@@ -239,7 +298,7 @@ function App() {
               opacity: canProcess ? 1 : 0.5
             }}
           >
-            [ PARSE PDF ]
+            [ 🚀 PROCESS CVs ]
           </button>
           <div style={{
             fontSize: '0.75rem',
@@ -247,12 +306,12 @@ function App() {
             marginTop: '0.5rem',
             color: textColor
           }}>
-            Phase 1: PDF parsing only (Gemini extraction coming in Phase 2)
+            Parse PDF + Extract with Gemini AI
           </div>
         </div>
       )}
 
-      {parsedCVs.length > 0 && (
+      {extractedCandidates.length > 0 && (
         <div style={{
           padding: '1.5rem',
           border: `2px solid ${borderColor}`,
@@ -267,14 +326,134 @@ function App() {
             letterSpacing: '0.1em',
             color: textColor
           }}>
-            [ PARSED CVS: {parsedCVs.length} ]
+            [ ✅ EXTRACTED CANDIDATES: {extractedCandidates.length} ]
           </div>
-          {parsedCVs.map((cv, index) => (
+          {extractedCandidates.map((candidate, index) => (
             <div
               key={index}
               style={{
                 padding: '1rem',
                 border: `1px solid ${borderColor}`,
+                marginBottom: '1rem',
+                background: actualTheme === 'dark' ? '#1a1a1a' : '#fff'
+              }}
+            >
+              <div style={{
+                fontWeight: 'bold',
+                fontSize: '1rem',
+                marginBottom: '0.75rem',
+                color: textColor
+              }}>
+                {index + 1}. {candidate.name}
+              </div>
+
+              {/* Work History */}
+              <div style={{
+                marginBottom: '0.75rem'
+              }}>
+                <div style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  marginBottom: '0.25rem',
+                  color: textColor,
+                  opacity: 0.8
+                }}>
+                  WORK HISTORY:
+                </div>
+                {candidate.workHistory.length > 0 ? (
+                  candidate.workHistory.map((work, wIdx) => (
+                    <div
+                      key={wIdx}
+                      style={{
+                        fontSize: '0.75rem',
+                        marginLeft: '1rem',
+                        marginBottom: '0.25rem',
+                        color: textColor,
+                        opacity: 0.7
+                      }}
+                    >
+                      • {work.jobTitle} at {work.company}
+                      {work.dates && ` (${work.dates})`}
+                    </div>
+                  ))
+                ) : (
+                  <div style={{
+                    fontSize: '0.75rem',
+                    marginLeft: '1rem',
+                    color: textColor,
+                    opacity: 0.5
+                  }}>
+                    No work history found
+                  </div>
+                )}
+              </div>
+
+              {/* Education */}
+              <div>
+                <div style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  marginBottom: '0.25rem',
+                  color: textColor,
+                  opacity: 0.8
+                }}>
+                  EDUCATION:
+                </div>
+                {candidate.education.length > 0 ? (
+                  candidate.education.map((edu, eIdx) => (
+                    <div
+                      key={eIdx}
+                      style={{
+                        fontSize: '0.75rem',
+                        marginLeft: '1rem',
+                        marginBottom: '0.25rem',
+                        color: textColor,
+                        opacity: 0.7
+                      }}
+                    >
+                      • {edu.degree} from {edu.institution}
+                      {edu.dates && ` (${edu.dates})`}
+                    </div>
+                  ))
+                ) : (
+                  <div style={{
+                    fontSize: '0.75rem',
+                    marginLeft: '1rem',
+                    color: textColor,
+                    opacity: 0.5
+                  }}>
+                    No education found
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {failedExtractions.length > 0 && (
+        <div style={{
+          padding: '1.5rem',
+          border: `2px solid #ff6b6b`,
+          background: bgColor,
+          boxShadow: `4px 4px 0px #ff6b6b`,
+          marginBottom: '1.5rem'
+        }}>
+          <div style={{
+            fontSize: '0.875rem',
+            fontWeight: 'bold',
+            marginBottom: '1rem',
+            letterSpacing: '0.1em',
+            color: '#ff6b6b'
+          }}>
+            [ ⚠️ FAILED EXTRACTIONS: {failedExtractions.length} ]
+          </div>
+          {failedExtractions.map((error, index) => (
+            <div
+              key={index}
+              style={{
+                padding: '1rem',
+                border: `1px solid #ff6b6b`,
                 marginBottom: '0.5rem',
                 background: actualTheme === 'dark' ? '#1a1a1a' : '#fff'
               }}
@@ -284,25 +463,14 @@ function App() {
                 marginBottom: '0.5rem',
                 color: textColor
               }}>
-                CV {index + 1}
+                CV {error.candidateIndex + 1}
+                {error.candidateName && ` - ${error.candidateName}`}
               </div>
               <div style={{
                 fontSize: '0.75rem',
-                opacity: 0.7,
-                color: textColor
+                color: '#ff6b6b'
               }}>
-                Pages: {cv.pageNumbers.join(', ')}
-              </div>
-              <div style={{
-                fontSize: '0.75rem',
-                opacity: 0.7,
-                marginTop: '0.25rem',
-                color: textColor,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
-                Preview: {cv.text.substring(0, 100)}...
+                Error: {error.error}
               </div>
             </div>
           ))}
@@ -310,7 +478,7 @@ function App() {
       )}
 
       <div className="footer">
-        [ Phase 1: Foundation Complete | Phase 2: Coming Soon - Gemini AI + Google Slides ]
+        [ Phase 2 Progress: ✅ PDF Parsing | ✅ Gemini Extraction | ⏳ Google Slides Generation ]
       </div>
     </div>
   );
