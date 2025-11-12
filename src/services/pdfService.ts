@@ -1,0 +1,94 @@
+// PDF parsing service using pdf.js
+import * as pdfjsLib from 'pdfjs-dist';
+import type { ParsedCV } from '../types';
+
+// Configure PDF.js worker
+const PDFJS_VERSION = '4.0.379';
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.mjs`;
+
+export class PDFService {
+  /**
+   * Parse PDF file and extract text from all pages
+   */
+  static async parsePDF(file: File): Promise<string[]> {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    const pageTexts: string[] = [];
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(' ');
+      pageTexts.push(pageText);
+    }
+
+    return pageTexts;
+  }
+
+  /**
+   * Split PDF pages into individual CVs based on "Page 1 of" markers
+   * Each CV starts when we detect "Page 1 of" text
+   */
+  static splitIntoCVs(pageTexts: string[]): ParsedCV[] {
+    const cvs: ParsedCV[] = [];
+    let currentCV: ParsedCV | null = null;
+
+    pageTexts.forEach((pageText, index) => {
+      const normalizedText = pageText.replace(/\s+/g, ' ').toLowerCase();
+
+      // Detect "page 1 of" marker (case-insensitive, handles various spacing)
+      const isNewCV = /page\s*1\s*of\s*\d+/i.test(normalizedText);
+
+      if (isNewCV) {
+        // Start a new CV
+        if (currentCV) {
+          cvs.push(currentCV);
+        }
+        currentCV = {
+          pageNumbers: [index + 1],
+          text: pageText
+        };
+      } else if (currentCV) {
+        // Continue current CV
+        currentCV.pageNumbers.push(index + 1);
+        currentCV.text += '\n\n' + pageText;
+      } else {
+        // No CV started yet, this might be a cover page or header
+        // Start a CV anyway to not lose data
+        currentCV = {
+          pageNumbers: [index + 1],
+          text: pageText
+        };
+      }
+    });
+
+    // Add the last CV
+    if (currentCV) {
+      cvs.push(currentCV);
+    }
+
+    return cvs;
+  }
+
+  /**
+   * Main method: Parse PDF and split into individual CVs
+   */
+  static async parseAndSplit(file: File): Promise<ParsedCV[]> {
+    console.log('📄 Parsing PDF file:', file.name);
+
+    const pageTexts = await this.parsePDF(file);
+    console.log(`✅ Extracted text from ${pageTexts.length} pages`);
+
+    const cvs = this.splitIntoCVs(pageTexts);
+    console.log(`✅ Detected ${cvs.length} individual CVs`);
+
+    cvs.forEach((cv, index) => {
+      console.log(`  CV ${index + 1}: Pages ${cv.pageNumbers.join(', ')}`);
+    });
+
+    return cvs;
+  }
+}
