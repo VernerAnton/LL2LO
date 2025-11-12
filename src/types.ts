@@ -1,6 +1,7 @@
 // Core types for LL2PP application
 
-export type Theme = 'light' | 'dark';
+export type Theme = 'system' | 'light' | 'dark'; // User's preference
+export type ActualTheme = 'light' | 'dark'; // What actually gets applied to UI
 
 export type ProcessingStatus = 'idle' | 'parsing' | 'extracting' | 'generating' | 'done' | 'error';
 

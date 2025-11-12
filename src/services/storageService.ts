@@ -29,35 +29,48 @@ export class StorageService {
   }
 
   /**
-   * Save theme preference
+   * Save theme preference (system/light/dark)
    */
-  static saveTheme(theme: 'light' | 'dark'): void {
+  static saveTheme(theme: 'system' | 'light' | 'dark'): void {
     localStorage.setItem(STORAGE_KEYS.THEME, theme);
   }
 
   /**
    * Get theme preference
-   * Priority: 1) User's saved preference, 2) System preference, 3) Default to dark
+   * Returns user's preference: 'system', 'light', or 'dark'
+   * Defaults to 'system' (auto) for first-time users
    */
-  static getTheme(): 'light' | 'dark' {
+  static getTheme(): 'system' | 'light' | 'dark' {
     const stored = localStorage.getItem(STORAGE_KEYS.THEME);
 
-    // If user has explicitly set a preference, use it
-    if (stored === 'light' || stored === 'dark') {
+    if (stored === 'system' || stored === 'light' || stored === 'dark') {
       return stored;
     }
 
-    // Otherwise, detect system preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    // Default to system (auto) for first-time users
+    return 'system';
+  }
+
+  /**
+   * Get the actual theme to apply to UI
+   * Resolves 'system' preference to 'light' or 'dark' based on OS setting
+   */
+  static getActualTheme(): 'light' | 'dark' {
+    const preference = this.getTheme();
+
+    if (preference === 'system') {
+      // Detect system preference
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        return 'light';
+      }
+      // Final fallback: dark mode (for Finland winters 🌙)
       return 'dark';
     }
 
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-      return 'light';
-    }
-
-    // Final fallback: dark mode (for Finland winters 🌙)
-    return 'dark';
+    return preference; // 'light' or 'dark'
   }
 
   /**
