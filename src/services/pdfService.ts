@@ -2,8 +2,8 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import type { ParsedCV } from '../types';
 
-// Configure PDF.js worker
-const PDFJS_VERSION = '4.0.379';
+// Configure PDF.js worker - use version 4.10.38 to match installed package
+const PDFJS_VERSION = '4.10.38';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.mjs`;
 
 export class PDFService {
