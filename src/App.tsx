@@ -433,6 +433,90 @@ function App() {
         </div>
       )}
 
+      {/* Generate Slides Button - MOVED ABOVE candidates list for easier access */}
+      {extractedCandidates.length > 0 && !generatedSlidesUrl && (
+        <div style={{
+          padding: '1.5rem',
+          border: `2px solid ${borderColor}`,
+          background: bgColor,
+          boxShadow: `4px 4px 0px ${borderColor}`,
+          marginBottom: '1.5rem',
+          textAlign: 'center'
+        }}>
+          <button
+            onClick={handleGenerateSlides}
+            disabled={!googleAuth.isAuthenticated || isGeneratingSlides}
+            style={{
+              padding: '1rem 2rem',
+              background: 'none',
+              border: `2px solid ${borderColor}`,
+              color: textColor,
+              fontFamily: 'Courier New, monospace',
+              fontWeight: 'bold',
+              cursor: (googleAuth.isAuthenticated && !isGeneratingSlides) ? 'pointer' : 'not-allowed',
+              letterSpacing: '0.1em',
+              fontSize: '1rem',
+              opacity: (googleAuth.isAuthenticated && !isGeneratingSlides) ? 1 : 0.5
+            }}
+          >
+            {isGeneratingSlides ? '[ ⏳ GENERATING... ]' : '[ 📊 GENERATE GOOGLE SLIDES ]'}
+          </button>
+          <div style={{
+            fontSize: '0.75rem',
+            opacity: 0.6,
+            marginTop: '0.5rem',
+            color: textColor
+          }}>
+            {googleAuth.isAuthenticated
+              ? `Create presentation with ${extractedCandidates.length} candidates`
+              : 'Sign in with Google to generate slides'}
+          </div>
+        </div>
+      )}
+
+      {/* Generated Slides URL */}
+      {generatedSlidesUrl && (
+        <div style={{
+          padding: '1.5rem',
+          border: `2px solid #4CAF50`,
+          background: bgColor,
+          boxShadow: `4px 4px 0px #4CAF50`,
+          marginBottom: '1.5rem'
+        }}>
+          <div style={{
+            fontSize: '0.875rem',
+            fontWeight: 'bold',
+            marginBottom: '1rem',
+            letterSpacing: '0.1em',
+            color: '#4CAF50'
+          }}>
+            [ ✅ PRESENTATION CREATED ]
+          </div>
+          <a
+            href={generatedSlidesUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: '#4CAF50',
+              textDecoration: 'underline',
+              fontSize: '0.875rem',
+              fontFamily: 'Courier New, monospace',
+              wordBreak: 'break-all'
+            }}
+          >
+            {generatedSlidesUrl}
+          </a>
+          <div style={{
+            fontSize: '0.75rem',
+            opacity: 0.6,
+            marginTop: '0.5rem',
+            color: textColor
+          }}>
+            Click to open in Google Slides
+          </div>
+        </div>
+      )}
+
       {extractedCandidates.length > 0 && (
         <div style={{
           padding: '1.5rem',
@@ -559,90 +643,6 @@ function App() {
           candidates={extractedCandidates}
           theme={actualTheme}
         />
-      )}
-
-      {/* Generate Slides Button */}
-      {extractedCandidates.length > 0 && !generatedSlidesUrl && (
-        <div style={{
-          padding: '1.5rem',
-          border: `2px solid ${borderColor}`,
-          background: bgColor,
-          boxShadow: `4px 4px 0px ${borderColor}`,
-          marginBottom: '1.5rem',
-          textAlign: 'center'
-        }}>
-          <button
-            onClick={handleGenerateSlides}
-            disabled={!googleAuth.isAuthenticated || isGeneratingSlides}
-            style={{
-              padding: '1rem 2rem',
-              background: 'none',
-              border: `2px solid ${borderColor}`,
-              color: textColor,
-              fontFamily: 'Courier New, monospace',
-              fontWeight: 'bold',
-              cursor: (googleAuth.isAuthenticated && !isGeneratingSlides) ? 'pointer' : 'not-allowed',
-              letterSpacing: '0.1em',
-              fontSize: '1rem',
-              opacity: (googleAuth.isAuthenticated && !isGeneratingSlides) ? 1 : 0.5
-            }}
-          >
-            {isGeneratingSlides ? '[ ⏳ GENERATING... ]' : '[ 📊 GENERATE GOOGLE SLIDES ]'}
-          </button>
-          <div style={{
-            fontSize: '0.75rem',
-            opacity: 0.6,
-            marginTop: '0.5rem',
-            color: textColor
-          }}>
-            {googleAuth.isAuthenticated
-              ? `Create presentation with ${extractedCandidates.length} candidates`
-              : 'Sign in with Google to generate slides'}
-          </div>
-        </div>
-      )}
-
-      {/* Generated Slides URL */}
-      {generatedSlidesUrl && (
-        <div style={{
-          padding: '1.5rem',
-          border: `2px solid #4CAF50`,
-          background: bgColor,
-          boxShadow: `4px 4px 0px #4CAF50`,
-          marginBottom: '1.5rem'
-        }}>
-          <div style={{
-            fontSize: '0.875rem',
-            fontWeight: 'bold',
-            marginBottom: '1rem',
-            letterSpacing: '0.1em',
-            color: '#4CAF50'
-          }}>
-            [ ✅ PRESENTATION CREATED ]
-          </div>
-          <a
-            href={generatedSlidesUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              color: '#4CAF50',
-              textDecoration: 'underline',
-              fontSize: '0.875rem',
-              fontFamily: 'Courier New, monospace',
-              wordBreak: 'break-all'
-            }}
-          >
-            {generatedSlidesUrl}
-          </a>
-          <div style={{
-            fontSize: '0.75rem',
-            opacity: 0.6,
-            marginTop: '0.5rem',
-            color: textColor
-          }}>
-            Click to open in Google Slides
-          </div>
-        </div>
       )}
 
       {failedExtractions.length > 0 && (
