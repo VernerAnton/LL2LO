@@ -410,7 +410,7 @@ export class SlidesService {
   }
 
   /**
-   * Format experience text: NAME (ALL CAPS) then • Company — Role
+   * Format experience text: NAME (ALL CAPS) then • Company — Role (dates)
    */
   private static formatExperienceText(candidate: CandidateData): string {
     const lines: string[] = [];
@@ -418,10 +418,11 @@ export class SlidesService {
     // Name in ALL CAPS
     lines.push(candidate.name.toUpperCase());
 
-    // Work history
+    // Work history with dates
     if (candidate.workHistory.length > 0) {
       candidate.workHistory.forEach(work => {
-        lines.push(`• ${work.company} — ${work.jobTitle}`);
+        const datesPart = work.dates ? ` (${work.dates})` : '';
+        lines.push(`• ${work.company} — ${work.jobTitle}${datesPart}`);
       });
     } else {
       lines.push('• No work history listed');
