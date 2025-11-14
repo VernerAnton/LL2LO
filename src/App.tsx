@@ -31,7 +31,7 @@ function App() {
   const [failedExtractions, setFailedExtractions] = useState<ProcessingError[]>([]);
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
-  const [selectedModel] = useState<GeminiModel>('gemini-2.5-flash');
+  const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.5-flash');
 
   // Google auth state
   const [googleAuth, setGoogleAuth] = useState<GoogleAuthState>({
@@ -318,6 +318,75 @@ function App() {
         theme={actualTheme}
         disabled={processingStatus !== 'idle' && processingStatus !== 'done' && processingStatus !== 'error'}
       />
+
+      {/* AI Model Selector */}
+      {uploadedFile && geminiApiKey && (
+        <div style={{
+          padding: '1.5rem',
+          border: `2px solid ${borderColor}`,
+          background: bgColor,
+          boxShadow: `4px 4px 0px ${borderColor}`,
+          marginBottom: '1.5rem'
+        }}>
+          <div style={{
+            fontSize: '0.875rem',
+            fontWeight: 'bold',
+            marginBottom: '1rem',
+            letterSpacing: '0.1em',
+            color: textColor
+          }}>
+            [ 🤖 SELECT AI MODEL ]
+          </div>
+
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <button
+              onClick={() => setSelectedModel('gemini-2.5-flash')}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: selectedModel === 'gemini-2.5-flash' ? textColor : 'none',
+                border: `2px solid ${borderColor}`,
+                color: selectedModel === 'gemini-2.5-flash' ? bgColor : textColor,
+                fontFamily: 'Courier New, monospace',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                letterSpacing: '0.1em',
+                fontSize: '0.875rem'
+              }}
+            >
+              FLASH (Fast)
+            </button>
+
+            <button
+              onClick={() => setSelectedModel('gemini-2.5-pro')}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: selectedModel === 'gemini-2.5-pro' ? textColor : 'none',
+                border: `2px solid ${borderColor}`,
+                color: selectedModel === 'gemini-2.5-pro' ? bgColor : textColor,
+                fontFamily: 'Courier New, monospace',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                letterSpacing: '0.1em',
+                fontSize: '0.875rem'
+              }}
+            >
+              PRO (Accurate)
+            </button>
+          </div>
+
+          <div style={{
+            fontSize: '0.75rem',
+            opacity: 0.6,
+            marginTop: '0.75rem',
+            textAlign: 'center',
+            color: textColor
+          }}>
+            {selectedModel === 'gemini-2.5-flash'
+              ? '⚡ Faster processing, may require retries for some CVs'
+              : '🎯 More reliable extraction, slower processing'}
+          </div>
+        </div>
+      )}
 
       <ProgressIndicator
         status={processingStatus}
