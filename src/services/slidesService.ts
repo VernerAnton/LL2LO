@@ -2,11 +2,9 @@
  * Google Slides Service
  *
  * Handles creation of Google Slides presentations from extracted candidate data.
- * Features:
- * - Creates presentations via Google Slides API
- * - 2x2 grid layout (4 candidates per slide)
- * - Optional branded template support
- * - Automatic slide generation with formatted candidate data
+ * Layout: 2 columns × 4 rows = 8 text boxes per slide (4 candidates)
+ * - Left column: Education only
+ * - Right column: Name (ALL CAPS) + Work history
  */
 
 import type { CandidateData } from '../types';
@@ -21,15 +19,27 @@ export interface SlidesGenerationResult {
 export class SlidesService {
   private static readonly SLIDES_API_BASE = 'https://slides.googleapis.com/v1';
 
-  // Slide dimensions (in points: 1 inch = 72 points)
-  private static readonly SLIDE_WIDTH = 720; // 10 inches
-  private static readonly SLIDE_HEIGHT = 405; // 5.625 inches (16:9 aspect ratio)
+  // Conversion: 1 cm = 360000 EMU (English Metric Units)
+  private static readonly CM_TO_EMU = 360000;
 
-  // Card dimensions for 2x2 grid with padding
-  private static readonly CARD_WIDTH = 320;
-  private static readonly CARD_HEIGHT = 180;
-  private static readonly CARD_PADDING = 20;
-  private static readonly CARD_MARGIN = 10;
+  // Layout configuration (in cm, converted to EMU for API)
+  private static readonly LAYOUT = {
+    education: { x: 1.9, w: 10.02 },    // Left column
+    experience: { x: 12.22, w: 13.15 }, // Right column
+    rows: [
+      { y: 1.75, h: 3.3 },  // Row 1
+      { y: 5.05, h: 3.3 },  // Row 2
+      { y: 8.35, h: 3.3 },  // Row 3
+      { y: 11.65, h: 3.3 }, // Row 4
+    ],
+  };
+
+  /**
+   * Convert cm to EMU
+   */
+  private static cmToEmu(cm: number): number {
+    return Math.round(cm * this.CM_TO_EMU);
+  }
 
   /**
    * Initialize the Google Slides API
@@ -54,10 +64,7 @@ export class SlidesService {
   }
 
   /**
-   * Create a presentation with candidates in 2x2 grid layout
-   * @param candidates Array of candidate data to include
-   * @param title Presentation title
-   * @param templateId Optional template presentation ID to copy from
+   * Create a presentation with candidates in 2-column, 4-row layout
    */
   static async createPresentation(
     candidates: CandidateData[],
@@ -69,27 +76,17 @@ export class SlidesService {
         throw new Error('Google API client not initialized');
       }
 
-      // Step 1: Create or copy presentation
-      let presentationId: string;
-
-      if (templateId) {
-        // Copy from template using Drive API
-        presentationId = await this.copyTemplate(templateId, title);
-      } else {
-        // Create blank presentation
-        const createResponse = await window.gapi.client.request({
-          path: `${this.SLIDES_API_BASE}/presentations`,
-          method: 'POST',
-          body: {
-            title: title
-          }
-        });
-        presentationId = createResponse.result.presentationId;
-      }
+      // Step 1: Create presentation
+      const createResponse = await window.gapi.client.request({
+        path: `${this.SLIDES_API_BASE}/presentations`,
+        method: 'POST',
+        body: { title }
+      });
+      const presentationId = createResponse.result.presentationId;
 
       console.log(`📊 Created presentation: ${presentationId}`);
 
-      // Step 2: Add candidate slides
+      // Step 2: Add candidate slides (4 candidates per slide)
       await this.addCandidateSlides(presentationId, candidates);
 
       // Step 3: Generate presentation URL
@@ -113,27 +110,13 @@ export class SlidesService {
   }
 
   /**
-   * Copy a template presentation
-   */
-  private static async copyTemplate(templateId: string, title: string): Promise<string> {
-    const response = await window.gapi.client.request({
-      path: `https://www.googleapis.com/drive/v3/files/${templateId}/copy`,
-      method: 'POST',
-      body: {
-        name: title
-      }
-    });
-    return response.result.id;
-  }
-
-  /**
-   * Add slides with candidates in 2x2 grid layout
+   * Add slides with candidates (4 per slide)
    */
   private static async addCandidateSlides(
     presentationId: string,
     candidates: CandidateData[]
   ): Promise<void> {
-    // Group candidates into batches of 4 (2x2 grid)
+    // Group candidates into batches of 4
     const candidateBatches: CandidateData[][] = [];
     for (let i = 0; i < candidates.length; i += 4) {
       candidateBatches.push(candidates.slice(i, i + 4));
@@ -144,22 +127,22 @@ export class SlidesService {
     // Process each batch (each batch = one slide)
     for (let batchIndex = 0; batchIndex < candidateBatches.length; batchIndex++) {
       const batch = candidateBatches[batchIndex];
-      await this.createSlideWithCandidates(presentationId, batch, batchIndex + 1);
+      await this.createSlideWithCandidates(presentationId, batch, batchIndex);
     }
   }
 
   /**
-   * Create a single slide with up to 4 candidates in 2x2 grid
+   * Create a single slide with up to 4 candidates
    */
   private static async createSlideWithCandidates(
     presentationId: string,
     candidates: CandidateData[],
-    slideNumber: number
+    slideIndex: number
   ): Promise<void> {
     const requests: any[] = [];
 
     // Create slide
-    const slideId = `slide_${slideNumber}_${Date.now()}`;
+    const slideId = `slide_${slideIndex}_${Date.now()}`;
     requests.push({
       createSlide: {
         objectId: slideId,
@@ -169,25 +152,27 @@ export class SlidesService {
       }
     });
 
-    // Add candidate cards in 2x2 grid
-    // Positions: [0] top-left, [1] top-right, [2] bottom-left, [3] bottom-right
-    const positions = [
-      { x: this.CARD_MARGIN, y: this.CARD_MARGIN }, // Top-left
-      { x: this.CARD_MARGIN * 2 + this.CARD_WIDTH, y: this.CARD_MARGIN }, // Top-right
-      { x: this.CARD_MARGIN, y: this.CARD_MARGIN * 2 + this.CARD_HEIGHT }, // Bottom-left
-      { x: this.CARD_MARGIN * 2 + this.CARD_WIDTH, y: this.CARD_MARGIN * 2 + this.CARD_HEIGHT } // Bottom-right
-    ];
-
+    // Add text boxes for each candidate (2 boxes per candidate: education + experience)
     candidates.forEach((candidate, index) => {
-      const pos = positions[index];
-      const cardRequests = this.createCandidateCard(
+      const row = this.LAYOUT.rows[index];
+
+      // Left box: Education
+      const educationBoxId = `edu_${slideIndex}_${index}_${Date.now()}`;
+      requests.push(...this.createEducationBox(
         slideId,
+        educationBoxId,
         candidate,
-        pos.x,
-        pos.y,
-        index
-      );
-      requests.push(...cardRequests);
+        row
+      ));
+
+      // Right box: Name + Work
+      const experienceBoxId = `exp_${slideIndex}_${index}_${Date.now()}`;
+      requests.push(...this.createExperienceBox(
+        slideId,
+        experienceBoxId,
+        candidate,
+        row
+      ));
     });
 
     // Execute batch update
@@ -197,128 +182,209 @@ export class SlidesService {
       body: { requests }
     });
 
-    console.log(`  ✅ Slide ${slideNumber} created with ${candidates.length} candidates`);
+    console.log(`  ✅ Slide ${slideIndex + 1} created with ${candidates.length} candidates`);
   }
 
   /**
-   * Create a candidate card with border, name, work history, and education
+   * Create education text box (left column)
    */
-  private static createCandidateCard(
+  private static createEducationBox(
     slideId: string,
+    boxId: string,
     candidate: CandidateData,
-    x: number,
-    y: number,
-    index: number
+    row: { y: number; h: number }
   ): any[] {
     const requests: any[] = [];
-    const cardId = `card_${index}_${Date.now()}`;
-
-    // Create border rectangle
-    requests.push({
-      createShape: {
-        objectId: `${cardId}_border`,
-        shapeType: 'RECTANGLE',
-        elementProperties: {
-          pageObjectId: slideId,
-          size: {
-            width: { magnitude: this.CARD_WIDTH, unit: 'PT' },
-            height: { magnitude: this.CARD_HEIGHT, unit: 'PT' }
-          },
-          transform: {
-            scaleX: 1,
-            scaleY: 1,
-            translateX: x,
-            translateY: y,
-            unit: 'PT'
-          }
-        }
-      }
-    });
-
-    // Style the border
-    requests.push({
-      updateShapeProperties: {
-        objectId: `${cardId}_border`,
-        shapeProperties: {
-          outline: {
-            outlineFill: {
-              solidFill: {
-                color: { rgbColor: { red: 0.16, green: 0.16, blue: 0.16 } }
-              }
-            },
-            weight: { magnitude: 2, unit: 'PT' }
-          },
-          shapeBackgroundFill: {
-            solidFill: {
-              color: { rgbColor: { red: 1, green: 1, blue: 1 } }
-            }
-          }
-        },
-        fields: 'outline,shapeBackgroundFill'
-      }
-    });
-
-    // Format candidate data as text
-    const text = this.formatCandidateText(candidate);
+    const layout = this.LAYOUT.education;
 
     // Create text box
-    const textBoxId = `${cardId}_text`;
     requests.push({
       createShape: {
-        objectId: textBoxId,
+        objectId: boxId,
         shapeType: 'TEXT_BOX',
         elementProperties: {
           pageObjectId: slideId,
           size: {
-            width: { magnitude: this.CARD_WIDTH - (this.CARD_PADDING * 2), unit: 'PT' },
-            height: { magnitude: this.CARD_HEIGHT - (this.CARD_PADDING * 2), unit: 'PT' }
+            width: { magnitude: this.cmToEmu(layout.w), unit: 'EMU' },
+            height: { magnitude: this.cmToEmu(row.h), unit: 'EMU' }
           },
           transform: {
             scaleX: 1,
             scaleY: 1,
-            translateX: x + this.CARD_PADDING,
-            translateY: y + this.CARD_PADDING,
-            unit: 'PT'
+            translateX: this.cmToEmu(layout.x),
+            translateY: this.cmToEmu(row.y),
+            unit: 'EMU'
           }
         }
       }
     });
 
-    // Insert text content
+    // Format education text
+    const text = this.formatEducationText(candidate);
+
+    // Insert text
     requests.push({
       insertText: {
-        objectId: textBoxId,
+        objectId: boxId,
         text: text
       }
     });
 
-    // Style the text
+    // Style the text - default 10pt with autofit
     requests.push({
-      updateTextStyle: {
-        objectId: textBoxId,
+      updateParagraphStyle: {
+        objectId: boxId,
         style: {
-          fontFamily: 'Courier New',
-          fontSize: { magnitude: 8, unit: 'PT' }
+          lineSpacing: 100,
+          spaceAbove: { magnitude: 0, unit: 'PT' },
+          spaceBelow: { magnitude: 0, unit: 'PT' }
         },
-        fields: 'fontFamily,fontSize'
+        fields: 'lineSpacing,spaceAbove,spaceBelow'
       }
     });
 
-    // Make name bold (first line)
-    const nameLength = candidate.name.length;
+    // Set default font size 10pt
     requests.push({
       updateTextStyle: {
-        objectId: textBoxId,
+        objectId: boxId,
+        style: {
+          fontSize: { magnitude: 10, unit: 'PT' }
+        },
+        fields: 'fontSize'
+      }
+    });
+
+    // Enable autofit to shrink text if needed
+    requests.push({
+      updateShapeProperties: {
+        objectId: boxId,
+        shapeProperties: {
+          autofit: {
+            autofitType: 'SHAPE_AUTOFIT'
+          }
+        },
+        fields: 'autofit'
+      }
+    });
+
+    // Make institution names bold
+    const boldRanges = this.getInstitutionBoldRanges(candidate, text);
+    boldRanges.forEach(range => {
+      requests.push({
+        updateTextStyle: {
+          objectId: boxId,
+          textRange: {
+            type: 'FIXED_RANGE',
+            startIndex: range.start,
+            endIndex: range.end
+          },
+          style: {
+            bold: true
+          },
+          fields: 'bold'
+        }
+      });
+    });
+
+    return requests;
+  }
+
+  /**
+   * Create experience text box (right column) - Name + Work
+   */
+  private static createExperienceBox(
+    slideId: string,
+    boxId: string,
+    candidate: CandidateData,
+    row: { y: number; h: number }
+  ): any[] {
+    const requests: any[] = [];
+    const layout = this.LAYOUT.experience;
+
+    // Create text box
+    requests.push({
+      createShape: {
+        objectId: boxId,
+        shapeType: 'TEXT_BOX',
+        elementProperties: {
+          pageObjectId: slideId,
+          size: {
+            width: { magnitude: this.cmToEmu(layout.w), unit: 'EMU' },
+            height: { magnitude: this.cmToEmu(row.h), unit: 'EMU' }
+          },
+          transform: {
+            scaleX: 1,
+            scaleY: 1,
+            translateX: this.cmToEmu(layout.x),
+            translateY: this.cmToEmu(row.y),
+            unit: 'EMU'
+          }
+        }
+      }
+    });
+
+    // Format name + work text
+    const text = this.formatExperienceText(candidate);
+
+    // Insert text
+    requests.push({
+      insertText: {
+        objectId: boxId,
+        text: text
+      }
+    });
+
+    // Style the text - default 10pt with autofit
+    requests.push({
+      updateParagraphStyle: {
+        objectId: boxId,
+        style: {
+          lineSpacing: 100,
+          spaceAbove: { magnitude: 0, unit: 'PT' },
+          spaceBelow: { magnitude: 0, unit: 'PT' }
+        },
+        fields: 'lineSpacing,spaceAbove,spaceBelow'
+      }
+    });
+
+    // Set default font size 10pt
+    requests.push({
+      updateTextStyle: {
+        objectId: boxId,
+        style: {
+          fontSize: { magnitude: 10, unit: 'PT' }
+        },
+        fields: 'fontSize'
+      }
+    });
+
+    // Enable autofit to shrink text if needed
+    requests.push({
+      updateShapeProperties: {
+        objectId: boxId,
+        shapeProperties: {
+          autofit: {
+            autofitType: 'SHAPE_AUTOFIT'
+          }
+        },
+        fields: 'autofit'
+      }
+    });
+
+    // Make name bold (first line, which is ALL CAPS)
+    const nameLength = candidate.name.toUpperCase().length;
+    requests.push({
+      updateTextStyle: {
+        objectId: boxId,
         textRange: {
           type: 'FIXED_RANGE',
           startIndex: 0,
           endIndex: nameLength
         },
         style: {
-          bold: true,
-          fontSize: { magnitude: 10, unit: 'PT' }
+          bold: true
         },
-        fields: 'bold,fontSize'
+        fields: 'bold'
       }
     });
 
@@ -326,43 +392,65 @@ export class SlidesService {
   }
 
   /**
-   * Format candidate data as plain text
+   * Format education text: Institution (bold) then • Degree (not bold)
    */
-  private static formatCandidateText(candidate: CandidateData): string {
+  private static formatEducationText(candidate: CandidateData): string {
     const lines: string[] = [];
 
-    // Name
-    lines.push(candidate.name);
-    lines.push('');
-
-    // Work History
-    if (candidate.workHistory.length > 0) {
-      lines.push('WORK HISTORY:');
-      candidate.workHistory.slice(0, 3).forEach(work => {
-        lines.push(`• ${work.jobTitle}`);
-        lines.push(`  ${work.company}`);
-        if (work.dates) {
-          lines.push(`  ${work.dates}`);
-        }
-      });
-      if (candidate.workHistory.length > 3) {
-        lines.push(`  ...and ${candidate.workHistory.length - 3} more`);
-      }
-      lines.push('');
-    }
-
-    // Education
     if (candidate.education.length > 0) {
-      lines.push('EDUCATION:');
-      candidate.education.slice(0, 2).forEach(edu => {
+      candidate.education.forEach(edu => {
+        lines.push(edu.institution);
         lines.push(`• ${edu.degree}`);
-        lines.push(`  ${edu.institution}`);
       });
-      if (candidate.education.length > 2) {
-        lines.push(`  ...and ${candidate.education.length - 2} more`);
-      }
+    } else {
+      lines.push('No education listed');
     }
 
     return lines.join('\n');
+  }
+
+  /**
+   * Format experience text: NAME (ALL CAPS) then • Company — Role
+   */
+  private static formatExperienceText(candidate: CandidateData): string {
+    const lines: string[] = [];
+
+    // Name in ALL CAPS
+    lines.push(candidate.name.toUpperCase());
+
+    // Work history
+    if (candidate.workHistory.length > 0) {
+      candidate.workHistory.forEach(work => {
+        lines.push(`• ${work.company} — ${work.jobTitle}`);
+      });
+    } else {
+      lines.push('• No work history listed');
+    }
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Get character ranges for institution names (to make them bold)
+   */
+  private static getInstitutionBoldRanges(
+    candidate: CandidateData,
+    text: string
+  ): Array<{ start: number; end: number }> {
+    const ranges: Array<{ start: number; end: number }> = [];
+    let currentIndex = 0;
+
+    candidate.education.forEach(edu => {
+      const institutionIndex = text.indexOf(edu.institution, currentIndex);
+      if (institutionIndex !== -1) {
+        ranges.push({
+          start: institutionIndex,
+          end: institutionIndex + edu.institution.length
+        });
+        currentIndex = institutionIndex + edu.institution.length;
+      }
+    });
+
+    return ranges;
   }
 }
