@@ -76,15 +76,22 @@ export class SlidesService {
         throw new Error('Google API client not initialized');
       }
 
+      console.log('📊 Creating presentation...');
+      console.log('   Token set:', window.gapi.client.getToken() !== null);
+
       // Step 1: Create presentation
       const createResponse = await window.gapi.client.request({
         path: `${this.SLIDES_API_BASE}/presentations`,
         method: 'POST',
         body: { title }
       });
-      const presentationId = createResponse.result.presentationId;
 
-      console.log(`📊 Created presentation: ${presentationId}`);
+      if (!createResponse || !createResponse.result) {
+        throw new Error('No response from Slides API');
+      }
+
+      const presentationId = createResponse.result.presentationId;
+      console.log(`✅ Created presentation: ${presentationId}`);
 
       // Step 2: Add candidate slides (4 candidates per slide)
       await this.addCandidateSlides(presentationId, candidates);
@@ -100,11 +107,16 @@ export class SlidesService {
         presentationUrl
       };
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Failed to create presentation:', error);
+      console.error('   Error details:', {
+        message: error.message,
+        status: error.status,
+        result: error.result
+      });
       return {
         success: false,
-        error: (error as Error).message
+        error: error.result?.error?.message || error.message || 'Unknown error'
       };
     }
   }

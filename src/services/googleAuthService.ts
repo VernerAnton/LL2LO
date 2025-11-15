@@ -57,12 +57,23 @@ export class GoogleAuthService {
                   }
 
                   this.accessToken = response.access_token;
+                  console.log('✅ Access token received');
+
                   // Set the access token for gapi client
                   window.gapi.client.setToken({ access_token: response.access_token });
 
-                  // Get user info
+                  // Update auth state immediately (before getting user info)
+                  this.updateAuthState(true, this.accessToken, this.userEmail);
+
+                  // Get user info asynchronously (don't block auth state update)
                   this.getUserInfo().then(() => {
-                    this.updateAuthState(true, this.accessToken, this.userEmail);
+                    console.log('✅ User info retrieved:', this.userEmail);
+                    // Update again with email if it wasn't set before
+                    if (this.userEmail) {
+                      this.updateAuthState(true, this.accessToken, this.userEmail);
+                    }
+                  }).catch((error) => {
+                    console.error('⚠️ Failed to get user info (but authentication still works):', error);
                   });
                 },
               });
