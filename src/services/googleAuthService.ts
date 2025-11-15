@@ -5,7 +5,8 @@ const CLIENT_ID = '815174038885-03a6vabiuh0m2fn4n93g2jj6ipu1aslv.apps.googleuser
 
 const SCOPES = [
   'https://www.googleapis.com/auth/presentations',
-  'https://www.googleapis.com/auth/drive.file'
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/userinfo.email'
 ].join(' ');
 
 // Declare global google object from Google Identity Services
