@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import { ThemeToggle } from './components/ThemeToggle';
 import { ApiKeyInput } from './components/ApiKeyInput';
+import { TemplateInput } from './components/TemplateInput';
 import { FileUploader } from './components/FileUploader';
 import { ProgressIndicator } from './components/ProgressIndicator';
 import { GoogleSignIn } from './components/GoogleSignIn';
@@ -21,6 +22,11 @@ function App() {
   // API key state
   const [geminiApiKey, setGeminiApiKey] = useState<string | null>(() =>
     StorageService.getGeminiKey()
+  );
+
+  // Template presentation ID state
+  const [templateId, setTemplateId] = useState<string | null>(() =>
+    StorageService.getTemplateId()
   );
 
   // File and processing state
@@ -133,6 +139,17 @@ function App() {
   const handleRemoveApiKey = () => {
     setGeminiApiKey(null);
     StorageService.removeGeminiKey();
+  };
+
+  // Template handlers
+  const handleSaveTemplate = (id: string) => {
+    setTemplateId(id);
+    StorageService.saveTemplateId(id);
+  };
+
+  const handleRemoveTemplate = () => {
+    setTemplateId(null);
+    StorageService.removeTemplateId();
   };
 
   // Google auth handlers
@@ -256,7 +273,8 @@ function App() {
 
       const result = await SlidesService.createPresentation(
         extractedCandidates,
-        `CV Candidates - ${new Date().toLocaleDateString()}`
+        `CV Candidates - ${new Date().toLocaleDateString()}`,
+        templateId || undefined // Pass template ID if available
       );
 
       if (result.success && result.presentationUrl) {
@@ -310,6 +328,13 @@ function App() {
         userEmail={googleAuth.userEmail}
         onSignIn={handleGoogleSignIn}
         onSignOut={handleGoogleSignOut}
+        theme={actualTheme}
+      />
+
+      <TemplateInput
+        existingTemplateId={templateId}
+        onSave={handleSaveTemplate}
+        onRemove={handleRemoveTemplate}
         theme={actualTheme}
       />
 
