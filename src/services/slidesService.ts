@@ -19,26 +19,26 @@ export interface SlidesGenerationResult {
 export class SlidesService {
   private static readonly SLIDES_API_BASE = 'https://slides.googleapis.com/v1';
 
-  // Conversion: 1 cm = 360000 EMU (English Metric Units)
-  private static readonly CM_TO_EMU = 360000;
+  // Conversion: 1 inch = 914400 EMU (English Metric Units)
+  private static readonly INCH_TO_EMU = 914400;
 
-  // Layout configuration (in cm, converted to EMU for API)
+  // Layout configuration (in inches, converted to EMU for API)
   private static readonly LAYOUT = {
-    education: { x: 1.9, w: 10.02 },    // Left column
-    experience: { x: 12.22, w: 13.15 }, // Right column
+    education: { x: 0.76, w: 3.94 },   // Left column
+    experience: { x: 4.82, w: 5.18 },  // Right column
     rows: [
-      { y: 1.75, h: 3.3 },  // Row 1
-      { y: 5.05, h: 3.3 },  // Row 2
-      { y: 8.35, h: 3.3 },  // Row 3
-      { y: 11.65, h: 3.3 }, // Row 4
+      { y: 0.72, h: 1.5 },  // Row 1
+      { y: 2.41, h: 1.5 },  // Row 2
+      { y: 4.16, h: 1.5 },  // Row 3
+      { y: 5.9, h: 1.5 },   // Row 4
     ],
   };
 
   /**
-   * Convert cm to EMU
+   * Convert inches to EMU
    */
-  private static cmToEmu(cm: number): number {
-    return Math.round(cm * this.CM_TO_EMU);
+  private static inchToEmu(inches: number): number {
+    return Math.round(inches * this.INCH_TO_EMU);
   }
 
   /**
@@ -225,14 +225,14 @@ export class SlidesService {
         elementProperties: {
           pageObjectId: slideId,
           size: {
-            width: { magnitude: this.cmToEmu(layout.w), unit: 'EMU' },
-            height: { magnitude: this.cmToEmu(row.h), unit: 'EMU' }
+            width: { magnitude: this.inchToEmu(layout.w), unit: 'EMU' },
+            height: { magnitude: this.inchToEmu(row.h), unit: 'EMU' }
           },
           transform: {
             scaleX: 1,
             scaleY: 1,
-            translateX: this.cmToEmu(layout.x),
-            translateY: this.cmToEmu(row.y),
+            translateX: this.inchToEmu(layout.x),
+            translateY: this.inchToEmu(row.y),
             unit: 'EMU'
           }
         }
@@ -274,7 +274,16 @@ export class SlidesService {
       }
     });
 
-    // Note: Autofit is enabled by default in text boxes, no need to explicitly set it
+    // Set vertical alignment to MIDDLE
+    requests.push({
+      updateShapeProperties: {
+        objectId: boxId,
+        shapeProperties: {
+          contentAlignment: 'MIDDLE'
+        },
+        fields: 'contentAlignment'
+      }
+    });
 
     // Make institution names bold
     const boldRanges = this.getInstitutionBoldRanges(candidate, text);
@@ -318,14 +327,14 @@ export class SlidesService {
         elementProperties: {
           pageObjectId: slideId,
           size: {
-            width: { magnitude: this.cmToEmu(layout.w), unit: 'EMU' },
-            height: { magnitude: this.cmToEmu(row.h), unit: 'EMU' }
+            width: { magnitude: this.inchToEmu(layout.w), unit: 'EMU' },
+            height: { magnitude: this.inchToEmu(row.h), unit: 'EMU' }
           },
           transform: {
             scaleX: 1,
             scaleY: 1,
-            translateX: this.cmToEmu(layout.x),
-            translateY: this.cmToEmu(row.y),
+            translateX: this.inchToEmu(layout.x),
+            translateY: this.inchToEmu(row.y),
             unit: 'EMU'
           }
         }
@@ -367,7 +376,16 @@ export class SlidesService {
       }
     });
 
-    // Note: Autofit is enabled by default in text boxes, no need to explicitly set it
+    // Set vertical alignment to MIDDLE
+    requests.push({
+      updateShapeProperties: {
+        objectId: boxId,
+        shapeProperties: {
+          contentAlignment: 'MIDDLE'
+        },
+        fields: 'contentAlignment'
+      }
+    });
 
     // Make name bold (first line, which is ALL CAPS)
     const nameLength = candidate.name.toUpperCase().length;
