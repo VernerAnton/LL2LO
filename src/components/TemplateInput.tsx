@@ -154,7 +154,7 @@ export function TemplateInput({ existingTemplateId, onSave, onRemove, theme }: T
         marginTop: '0.5rem',
         color: textColor
       }}>
-        Template must be shared as "Anyone with the link can view". First and last slides will be untouched.
+        First, make a copy of the master template (File → Make a Copy). Then paste YOUR copy's URL here. Slide 1 stays as-is, Slide 2 is used as the candidate template.
       </div>
     </div>
   );

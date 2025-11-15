@@ -12,7 +12,7 @@ import { PDFService } from './services/pdfService';
 import { GeminiService } from './services/geminiService';
 import { SlidesService } from './services/slidesService';
 import { GoogleAuthService, type GoogleAuthState } from './services/googleAuthService';
-import type { Theme, ActualTheme, ProcessingStatus, ParsedCV, CandidateData, ProcessingError, GeminiModel } from './types';
+import type { Theme, ActualTheme, ProcessingStatus, CandidateData, ProcessingError, GeminiModel } from './types';
 
 function App() {
   // Theme state - track both preference and actual theme
@@ -32,7 +32,7 @@ function App() {
   // File and processing state
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>('idle');
-  const [parsedCVs, setParsedCVs] = useState<ParsedCV[]>([]);
+  const [_parsedCVs, setParsedCVs] = useState<any[]>([]);
   const [extractedCandidates, setExtractedCandidates] = useState<CandidateData[]>([]);
   const [failedExtractions, setFailedExtractions] = useState<ProcessingError[]>([]);
   const [progressCurrent, setProgressCurrent] = useState(0);
