@@ -274,18 +274,7 @@ export class SlidesService {
       }
     });
 
-    // Enable autofit to shrink text if needed
-    requests.push({
-      updateShapeProperties: {
-        objectId: boxId,
-        shapeProperties: {
-          autofit: {
-            autofitType: 'SHAPE_AUTOFIT'
-          }
-        },
-        fields: 'autofit'
-      }
-    });
+    // Note: Autofit is enabled by default in text boxes, no need to explicitly set it
 
     // Make institution names bold
     const boldRanges = this.getInstitutionBoldRanges(candidate, text);
@@ -378,18 +367,7 @@ export class SlidesService {
       }
     });
 
-    // Enable autofit to shrink text if needed
-    requests.push({
-      updateShapeProperties: {
-        objectId: boxId,
-        shapeProperties: {
-          autofit: {
-            autofitType: 'SHAPE_AUTOFIT'
-          }
-        },
-        fields: 'autofit'
-      }
-    });
+    // Note: Autofit is enabled by default in text boxes, no need to explicitly set it
 
     // Make name bold (first line, which is ALL CAPS)
     const nameLength = candidate.name.toUpperCase().length;
