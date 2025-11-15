@@ -20,14 +20,14 @@ export function GoogleSignIn({
   const textColor = theme === 'dark' ? '#e0e0e0' : '#2a2a2a';
 
   if (isAuthenticated && userEmail) {
-    // Signed in state - BRIGHT GREEN BACKGROUND to make it VERY obvious
+    // Signed in state - GREEN BORDER to make it obvious
     return (
       <div
         style={{
           padding: '1.5rem',
-          border: `4px solid #4CAF50`,
-          background: '#E8F5E9', // Light green background (works in both themes)
-          boxShadow: `6px 6px 0px #4CAF50`,
+          border: `3px solid #4CAF50`,
+          background: bgColor,
+          boxShadow: `4px 4px 0px #4CAF50`,
           marginBottom: '1.5rem',
         }}
       >
@@ -41,23 +41,23 @@ export function GoogleSignIn({
           <div>
             <div
               style={{
-                fontSize: '1.25rem',
+                fontSize: '1rem',
                 fontWeight: 'bold',
                 marginBottom: '0.5rem',
                 letterSpacing: '0.1em',
-                color: '#2E7D32', // Dark green text for contrast
+                color: '#4CAF50',
               }}
             >
-              ✅ GOOGLE AUTHENTICATED ✅
+              [ ✅ GOOGLE AUTHENTICATED ]
             </div>
             <div
               style={{
                 fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#1B5E20',
+                opacity: 0.9,
+                color: textColor,
               }}
             >
-              Signed in as: {userEmail}
+              {userEmail}
             </div>
           </div>
           <button
@@ -65,8 +65,8 @@ export function GoogleSignIn({
             style={{
               padding: '0.5rem 1rem',
               background: 'none',
-              border: `2px solid #2E7D32`,
-              color: '#2E7D32',
+              border: `2px solid ${borderColor}`,
+              color: textColor,
               fontFamily: 'Courier New, monospace',
               fontWeight: 'bold',
               cursor: 'pointer',
