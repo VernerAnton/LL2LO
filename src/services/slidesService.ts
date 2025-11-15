@@ -83,22 +83,11 @@ export class SlidesService {
       let presentationId: string;
 
       if (templateId) {
-        // Step 1: Copy template presentation
-        console.log('📋 Copying template presentation...');
-        const copyResponse = await window.gapi.client.request({
-          path: `https://www.googleapis.com/drive/v3/files/${templateId}/copy`,
-          method: 'POST',
-          body: { name: title }
-        });
+        // Use the user's own copy of the template (they must copy it first)
+        presentationId = templateId;
+        console.log(`📋 Using user's template copy: ${presentationId}`);
 
-        if (!copyResponse || !copyResponse.result || !copyResponse.result.id) {
-          throw new Error('Failed to copy template presentation');
-        }
-
-        presentationId = copyResponse.result.id;
-        console.log(`✅ Copied template: ${presentationId}`);
-
-        // Step 2: Duplicate Slide 2 (candidate template) for each batch and add text boxes
+        // Duplicate Slide 2 (candidate template) for each batch and add text boxes
         await this.duplicateTemplateSlides(presentationId, candidates);
       } else {
         // Fallback: Create blank presentation
@@ -144,6 +133,7 @@ export class SlidesService {
 
   /**
    * Duplicate Slide 2 from template for each batch of candidates
+   * Uses objectIds mapping to combine duplicate + text operations in ONE batch
    */
   private static async duplicateTemplateSlides(
     presentationId: string,
@@ -171,83 +161,55 @@ export class SlidesService {
     const templateSlideId = slides[1].objectId; // Slide 2 (index 1)
     console.log(`   Template slide ID: ${templateSlideId}`);
 
-    // Duplicate slide for each batch and add text boxes
+    // Duplicate slide for each batch and add text boxes in ONE batch
     for (let batchIndex = 0; batchIndex < candidateBatches.length; batchIndex++) {
       const batch = candidateBatches[batchIndex];
+      const requests: any[] = [];
 
-      // Duplicate the template slide
-      const duplicateResponse = await window.gapi.client.request({
-        path: `${this.SLIDES_API_BASE}/presentations/${presentationId}:batchUpdate`,
-        method: 'POST',
-        body: {
-          requests: [{
-            duplicateObject: {
-              objectId: templateSlideId,
-              objectIds: {} // Let API generate new ID
-            }
-          }]
+      // Pre-define the new slide ID using objectIds mapping
+      const newSlideId = `slide_${batchIndex}_${Date.now()}`;
+
+      // Request 1: Duplicate slide WITH predefined ID
+      requests.push({
+        duplicateObject: {
+          objectId: templateSlideId,
+          objectIds: {
+            [templateSlideId]: newSlideId  // Maps old ID → new ID
+          }
         }
       });
 
-      const newSlideId = duplicateResponse.result.replies[0].duplicateObject.objectId;
-      console.log(`  ✅ Duplicated slide ${batchIndex + 1}: ${newSlideId}`);
+      // Requests 2-N: Add text boxes to the new slide
+      batch.forEach((candidate, index) => {
+        const row = this.LAYOUT.rows[index];
 
-      // Add text boxes to the duplicated slide
-      await this.addTextBoxesToSlide(presentationId, newSlideId, batch, batchIndex);
-    }
-  }
+        // Education box
+        const eduBoxId = `edu_${batchIndex}_${index}_${Date.now()}`;
+        requests.push(...this.createEducationBox(newSlideId, eduBoxId, candidate, row));
 
-  /**
-   * Add text boxes to a slide (used for template-based approach)
-   */
-  private static async addTextBoxesToSlide(
-    presentationId: string,
-    slideId: string,
-    candidates: CandidateData[],
-    batchIndex: number
-  ): Promise<void> {
-    const requests: any[] = [];
-
-    // Add text boxes for each candidate (2 boxes per candidate: education + experience)
-    candidates.forEach((candidate, index) => {
-      const row = this.LAYOUT.rows[index];
-
-      // Left box: Education
-      const educationBoxId = `edu_${batchIndex}_${index}_${Date.now()}`;
-      requests.push(...this.createEducationBox(
-        slideId,
-        educationBoxId,
-        candidate,
-        row
-      ));
-
-      // Right box: Name + Work
-      const experienceBoxId = `exp_${batchIndex}_${index}_${Date.now()}`;
-      requests.push(...this.createExperienceBox(
-        slideId,
-        experienceBoxId,
-        candidate,
-        row
-      ));
-    });
-
-    // Execute batch update
-    console.log(`  📝 Adding ${requests.length} text boxes to slide ${batchIndex + 1}...`);
-
-    try {
-      await window.gapi.client.request({
-        path: `${this.SLIDES_API_BASE}/presentations/${presentationId}:batchUpdate`,
-        method: 'POST',
-        body: { requests }
+        // Experience box
+        const expBoxId = `exp_${batchIndex}_${index}_${Date.now()}`;
+        requests.push(...this.createExperienceBox(newSlideId, expBoxId, candidate, row));
       });
 
-      console.log(`  ✅ Added text boxes to slide ${batchIndex + 1} with ${candidates.length} candidates`);
-    } catch (error: any) {
-      console.error(`  ❌ Failed to add text boxes to slide ${batchIndex + 1}:`, error);
-      console.error('  Full batch update error:', JSON.stringify(error, null, 2));
-      console.error('  Error body:', error.body);
-      console.error('  Requests that failed:', JSON.stringify(requests, null, 2));
-      throw error;
+      // Execute ONE batch update with duplicate + text operations
+      console.log(`  📝 Slide ${batchIndex + 1}: Sending ${requests.length} requests in ONE batch...`);
+
+      try {
+        await window.gapi.client.request({
+          path: `${this.SLIDES_API_BASE}/presentations/${presentationId}:batchUpdate`,
+          method: 'POST',
+          body: { requests }
+        });
+
+        console.log(`  ✅ Slide ${batchIndex + 1} created with ${batch.length} candidates`);
+      } catch (error: any) {
+        console.error(`  ❌ Failed to create slide ${batchIndex + 1}:`, error);
+        console.error('  Full batch update error:', JSON.stringify(error, null, 2));
+        console.error('  Error body:', error.body);
+        console.error('  Requests that failed:', JSON.stringify(requests, null, 2));
+        throw error;
+      }
     }
   }
 
