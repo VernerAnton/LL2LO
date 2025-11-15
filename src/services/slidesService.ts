@@ -109,11 +109,9 @@ export class SlidesService {
 
     } catch (error: any) {
       console.error('❌ Failed to create presentation:', error);
-      console.error('   Error details:', {
-        message: error.message,
-        status: error.status,
-        result: error.result
-      });
+      console.error('   Full error object:', JSON.stringify(error, null, 2));
+      console.error('   Error body:', error.body);
+      console.error('   Error result:', error.result);
       return {
         success: false,
         error: error.result?.error?.message || error.message || 'Unknown error'
@@ -188,13 +186,23 @@ export class SlidesService {
     });
 
     // Execute batch update
-    await window.gapi.client.request({
-      path: `${this.SLIDES_API_BASE}/presentations/${presentationId}:batchUpdate`,
-      method: 'POST',
-      body: { requests }
-    });
+    console.log(`  📝 Sending ${requests.length} requests for slide ${slideIndex + 1}...`);
 
-    console.log(`  ✅ Slide ${slideIndex + 1} created with ${candidates.length} candidates`);
+    try {
+      await window.gapi.client.request({
+        path: `${this.SLIDES_API_BASE}/presentations/${presentationId}:batchUpdate`,
+        method: 'POST',
+        body: { requests }
+      });
+
+      console.log(`  ✅ Slide ${slideIndex + 1} created with ${candidates.length} candidates`);
+    } catch (error: any) {
+      console.error(`  ❌ Failed to create slide ${slideIndex + 1}:`, error);
+      console.error('  Full batch update error:', JSON.stringify(error, null, 2));
+      console.error('  Error body:', error.body);
+      console.error('  Requests that failed:', JSON.stringify(requests, null, 2));
+      throw error;
+    }
   }
 
   /**
