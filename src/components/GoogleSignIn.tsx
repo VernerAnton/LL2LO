@@ -29,46 +29,54 @@ export function GoogleSignIn({
           background: bgColor,
           boxShadow: `4px 4px 0px ${borderColor}`,
           marginBottom: '1.5rem',
-          textAlign: 'center',
         }}
       >
         <div
           style={{
-            fontSize: '0.875rem',
-            fontWeight: 'bold',
-            marginBottom: '0.5rem',
-            letterSpacing: '0.1em',
-            color: textColor,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
           }}
         >
-          [ ✅ GOOGLE AUTHENTICATED ]
+          <div>
+            <div
+              style={{
+                fontSize: '0.875rem',
+                fontWeight: 'bold',
+                marginBottom: '0.5rem',
+                letterSpacing: '0.1em',
+                color: textColor,
+              }}
+            >
+              [ ✅ GOOGLE AUTHENTICATED ]
+            </div>
+            <div
+              style={{
+                fontSize: '0.75rem',
+                opacity: 0.7,
+                color: textColor,
+              }}
+            >
+              {userEmail}
+            </div>
+          </div>
+          <button
+            onClick={onSignOut}
+            style={{
+              padding: '0.5rem 1rem',
+              background: 'none',
+              border: `2px solid ${borderColor}`,
+              color: textColor,
+              fontFamily: 'Courier New, monospace',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              letterSpacing: '0.05em',
+              fontSize: '0.75rem',
+            }}
+          >
+            [ SIGN OUT ]
+          </button>
         </div>
-        <div
-          style={{
-            fontSize: '0.75rem',
-            opacity: 0.7,
-            marginBottom: '1rem',
-            color: textColor,
-          }}
-        >
-          {userEmail}
-        </div>
-        <button
-          onClick={onSignOut}
-          style={{
-            padding: '0.5rem 1rem',
-            background: 'none',
-            border: `2px solid ${borderColor}`,
-            color: textColor,
-            fontFamily: 'Courier New, monospace',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            letterSpacing: '0.05em',
-            fontSize: '0.75rem',
-          }}
-        >
-          [ SIGN OUT ]
-        </button>
       </div>
     );
   }
