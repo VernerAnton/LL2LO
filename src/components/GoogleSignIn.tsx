@@ -20,14 +20,14 @@ export function GoogleSignIn({
   const textColor = theme === 'dark' ? '#e0e0e0' : '#2a2a2a';
 
   if (isAuthenticated && userEmail) {
-    // Signed in state - GREEN BORDER to make it obvious
+    // Signed in state
     return (
       <div
         style={{
           padding: '1.5rem',
-          border: `3px solid #4CAF50`,
+          border: `2px solid ${borderColor}`,
           background: bgColor,
-          boxShadow: `4px 4px 0px #4CAF50`,
+          boxShadow: `4px 4px 0px ${borderColor}`,
           marginBottom: '1.5rem',
         }}
       >
@@ -41,19 +41,19 @@ export function GoogleSignIn({
           <div>
             <div
               style={{
-                fontSize: '1rem',
+                fontSize: '0.875rem',
                 fontWeight: 'bold',
                 marginBottom: '0.5rem',
                 letterSpacing: '0.1em',
-                color: '#4CAF50',
+                color: textColor,
               }}
             >
               [ ✅ GOOGLE AUTHENTICATED ]
             </div>
             <div
               style={{
-                fontSize: '0.875rem',
-                opacity: 0.9,
+                fontSize: '0.75rem',
+                opacity: 0.7,
                 color: textColor,
               }}
             >
