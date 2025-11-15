@@ -2,6 +2,7 @@
 
 const STORAGE_KEYS = {
   GEMINI_API_KEY: 'gemini_api_key',
+  TEMPLATE_ID: 'template_id',
   THEME: 'theme',
   SELECTED_MODEL: 'selected_model',
 } as const;
@@ -26,6 +27,27 @@ export class StorageService {
    */
   static removeGeminiKey(): void {
     localStorage.removeItem(STORAGE_KEYS.GEMINI_API_KEY);
+  }
+
+  /**
+   * Save template presentation ID to localStorage
+   */
+  static saveTemplateId(id: string): void {
+    localStorage.setItem(STORAGE_KEYS.TEMPLATE_ID, id);
+  }
+
+  /**
+   * Get template presentation ID from localStorage
+   */
+  static getTemplateId(): string | null {
+    return localStorage.getItem(STORAGE_KEYS.TEMPLATE_ID);
+  }
+
+  /**
+   * Remove template ID from localStorage
+   */
+  static removeTemplateId(): void {
+    localStorage.removeItem(STORAGE_KEYS.TEMPLATE_ID);
   }
 
   /**
