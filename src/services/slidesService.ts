@@ -64,6 +64,57 @@ export class SlidesService {
   }
 
   /**
+   * PHASE 1: Copy template presentation using Drive API
+   */
+  private static async copyPresentation(
+    templateId: string,
+    title: string
+  ): Promise<string> {
+    console.log('📋 Phase 1: Copying template presentation...');
+
+    const response = await window.gapi.client.request({
+      path: `https://www.googleapis.com/drive/v3/files/${templateId}/copy`,
+      method: 'POST',
+      body: { name: title }
+    });
+
+    if (!response || !response.result || !response.result.id) {
+      throw new Error('Failed to copy template presentation');
+    }
+
+    const newPresentationId = response.result.id;
+    console.log(`✅ Template copied. New presentation ID: ${newPresentationId}`);
+
+    return newPresentationId;
+  }
+
+  /**
+   * PHASE 2: Get Slide 2's objectId
+   */
+  private static async getSlideObjectId(
+    presentationId: string,
+    slideIndex: number = 1
+  ): Promise<string> {
+    console.log(`📄 Phase 2: Getting objectId for slide at index ${slideIndex}...`);
+
+    const response = await window.gapi.client.request({
+      path: `${this.SLIDES_API_BASE}/presentations/${presentationId}`,
+      method: 'GET',
+      params: { fields: 'slides.objectId' }
+    });
+
+    const slides = response.result.slides;
+    if (!slides || slides.length <= slideIndex) {
+      throw new Error(`Template must have at least ${slideIndex + 1} slides`);
+    }
+
+    const slideObjectId = slides[slideIndex].objectId;
+    console.log(`✅ Slide ${slideIndex + 1} objectId: ${slideObjectId}`);
+
+    return slideObjectId;
+  }
+
+  /**
    * Create a presentation with candidates in 2-column, 4-row layout
    */
   static async createPresentation(
@@ -83,12 +134,11 @@ export class SlidesService {
       let presentationId: string;
 
       if (templateId) {
-        // Use the user's own copy of the template (they must copy it first)
-        presentationId = templateId;
-        console.log(`📋 Using user's template copy: ${presentationId}`);
+        // PHASE 1: Copy the template (Drive API)
+        presentationId = await this.copyPresentation(templateId, title);
 
-        // Duplicate Slide 2 (candidate template) for each batch and add text boxes
-        await this.duplicateTemplateSlides(presentationId, candidates);
+        // PHASE 2-4: Duplicate slides and add text boxes
+        await this.duplicateAndPopulateSlides(presentationId, candidates);
       } else {
         // Fallback: Create blank presentation
         const createResponse = await window.gapi.client.request({
@@ -104,11 +154,11 @@ export class SlidesService {
         presentationId = createResponse.result.presentationId;
         console.log(`✅ Created blank presentation: ${presentationId}`);
 
-        // Step 2: Add candidate slides (4 candidates per slide)
+        // Add candidate slides (4 candidates per slide)
         await this.addCandidateSlides(presentationId, candidates);
       }
 
-      // Step 3: Generate presentation URL
+      // Generate presentation URL
       const presentationUrl = `https://docs.google.com/presentation/d/${presentationId}/edit`;
 
       console.log(`✅ Presentation ready: ${presentationUrl}`);
@@ -132,84 +182,90 @@ export class SlidesService {
   }
 
   /**
-   * Duplicate Slide 2 from template for each batch of candidates
-   * Uses objectIds mapping to combine duplicate + text operations in ONE batch
+   * PHASE 2-4: Duplicate slides and populate with candidate data
+   * Uses original Slide 2 for first batch, duplicates for remaining batches
    */
-  private static async duplicateTemplateSlides(
+  private static async duplicateAndPopulateSlides(
     presentationId: string,
     candidates: CandidateData[]
   ): Promise<void> {
-    // Group candidates into batches of 4
-    const candidateBatches: CandidateData[][] = [];
-    for (let i = 0; i < candidates.length; i += 4) {
-      candidateBatches.push(candidates.slice(i, i + 4));
+    const timestamp = Date.now();
+
+    // PHASE 2: Calculate slides needed
+    const candidatesPerSlide = 4;
+    const totalSlidesNeeded = Math.ceil(candidates.length / candidatesPerSlide);
+    const duplicationsNeeded = Math.max(0, totalSlidesNeeded - 1);
+
+    console.log(`📊 Phase 2: Need ${totalSlidesNeeded} slides for ${candidates.length} candidates`);
+    console.log(`   Using original Slide 2 + ${duplicationsNeeded} duplications`);
+
+    // Get Slide 2's objectId
+    const slide2ObjectId = await this.getSlideObjectId(presentationId, 1);
+
+    // PHASE 3: Build all requests
+    console.log('📝 Phase 3: Building batch requests...');
+    const allRequests: any[] = [];
+
+    // Build list of target slide IDs
+    const duplicatedSlideIds: string[] = [];
+    for (let i = 0; i < duplicationsNeeded; i++) {
+      duplicatedSlideIds.push(`candidate_slide_${i}_${timestamp}`);
     }
 
-    console.log(`📄 Duplicating template slide ${candidateBatches.length} times for ${candidates.length} candidates`);
+    const targetSlideIds = [slide2ObjectId, ...duplicatedSlideIds];
 
-    // Get presentation to find slide IDs
-    const getResponse = await window.gapi.client.request({
-      path: `${this.SLIDES_API_BASE}/presentations/${presentationId}`,
-      method: 'GET'
-    });
-
-    const slides = getResponse.result.slides;
-    if (!slides || slides.length < 2) {
-      throw new Error('Template must have at least 2 slides (intro + candidate template)');
-    }
-
-    const templateSlideId = slides[1].objectId; // Slide 2 (index 1)
-    console.log(`   Template slide ID: ${templateSlideId}`);
-
-    // Duplicate slide for each batch and add text boxes in ONE batch
-    for (let batchIndex = 0; batchIndex < candidateBatches.length; batchIndex++) {
-      const batch = candidateBatches[batchIndex];
-      const requests: any[] = [];
-
-      // Pre-define the new slide ID using objectIds mapping
-      const newSlideId = `slide_${batchIndex}_${Date.now()}`;
-
-      // Request 1: Duplicate slide WITH predefined ID
-      requests.push({
+    // Add duplication requests (for slides 2, 3, 4, ...)
+    duplicatedSlideIds.forEach((newSlideId, index) => {
+      console.log(`   Duplication ${index + 1}: ${slide2ObjectId} → ${newSlideId}`);
+      allRequests.push({
         duplicateObject: {
-          objectId: templateSlideId,
+          objectId: slide2ObjectId,
           objectIds: {
-            [templateSlideId]: newSlideId  // Maps old ID → new ID
+            [slide2ObjectId]: newSlideId
           }
         }
       });
+    });
 
-      // Requests 2-N: Add text boxes to the new slide
-      batch.forEach((candidate, index) => {
-        const row = this.LAYOUT.rows[index];
+    // Add text box creation requests for ALL slides
+    for (let slideIdx = 0; slideIdx < totalSlidesNeeded; slideIdx++) {
+      const startIdx = slideIdx * candidatesPerSlide;
+      const candidateBatch = candidates.slice(startIdx, startIdx + candidatesPerSlide);
+      const targetSlideId = targetSlideIds[slideIdx];
 
-        // Education box
-        const eduBoxId = `edu_${batchIndex}_${index}_${Date.now()}`;
-        requests.push(...this.createEducationBox(newSlideId, eduBoxId, candidate, row));
+      console.log(`   Slide ${slideIdx + 1} (${targetSlideId}): ${candidateBatch.length} candidates`);
 
-        // Experience box
-        const expBoxId = `exp_${batchIndex}_${index}_${Date.now()}`;
-        requests.push(...this.createExperienceBox(newSlideId, expBoxId, candidate, row));
+      candidateBatch.forEach((candidate, rowIdx) => {
+        const row = this.LAYOUT.rows[rowIdx];
+
+        // Education box (left column)
+        const eduBoxId = `edu_s${slideIdx}_c${rowIdx}_${timestamp}`;
+        allRequests.push(...this.createEducationBox(targetSlideId, eduBoxId, candidate, row));
+
+        // Experience box (right column)
+        const expBoxId = `exp_s${slideIdx}_c${rowIdx}_${timestamp}`;
+        allRequests.push(...this.createExperienceBox(targetSlideId, expBoxId, candidate, row));
+      });
+    }
+
+    // PHASE 4: Execute single atomic batch
+    console.log(`🚀 Phase 4: Executing ${allRequests.length} requests in ONE atomic batch...`);
+
+    try {
+      await window.gapi.client.request({
+        path: `${this.SLIDES_API_BASE}/presentations/${presentationId}:batchUpdate`,
+        method: 'POST',
+        body: { requests: allRequests }
       });
 
-      // Execute ONE batch update with duplicate + text operations
-      console.log(`  📝 Slide ${batchIndex + 1}: Sending ${requests.length} requests in ONE batch...`);
-
-      try {
-        await window.gapi.client.request({
-          path: `${this.SLIDES_API_BASE}/presentations/${presentationId}:batchUpdate`,
-          method: 'POST',
-          body: { requests }
-        });
-
-        console.log(`  ✅ Slide ${batchIndex + 1} created with ${batch.length} candidates`);
-      } catch (error: any) {
-        console.error(`  ❌ Failed to create slide ${batchIndex + 1}:`, error);
-        console.error('  Full batch update error:', JSON.stringify(error, null, 2));
-        console.error('  Error body:', error.body);
-        console.error('  Requests that failed:', JSON.stringify(requests, null, 2));
-        throw error;
-      }
+      console.log(`✅ All slides created successfully!`);
+      console.log(`   ${totalSlidesNeeded} slides with ${candidates.length} total candidates`);
+    } catch (error: any) {
+      console.error('❌ Batch update failed:', error);
+      console.error('   Full error:', JSON.stringify(error, null, 2));
+      console.error('   Error body:', error.body);
+      console.error('   Total requests:', allRequests.length);
+      throw error;
     }
   }
 
