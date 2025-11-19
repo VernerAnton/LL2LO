@@ -1,5 +1,5 @@
 // Rate limiter for API calls to avoid hitting quotas
-// Gemini free tier: 15 RPM (requests per minute)
+// Gemini free tier: 10 RPM (requests per minute)
 
 interface QueuedRequest<T> {
   fn: () => Promise<T>;
@@ -13,7 +13,7 @@ export class RateLimiter {
   private lastRequestTime = 0;
 
   constructor(
-    private minDelayMs: number = 4000 // 4 seconds between requests (15 per minute)
+    private minDelayMs: number = 6000 // 6 seconds between requests (10 per minute)
   ) {}
 
   /**
