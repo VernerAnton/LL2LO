@@ -9,6 +9,8 @@ export type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.5-pro';
 
 export type OutputMethod = 'slides' | 'manual';
 
+export type ParseMode = 'longlist' | 'individual';
+
 export interface WorkExperience {
   jobTitle: string;
   company: string;

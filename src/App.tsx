@@ -3,6 +3,7 @@ import './App.css';
 import { ThemeToggle } from './components/ThemeToggle';
 import { ApiKeyInput } from './components/ApiKeyInput';
 import { TemplateInput } from './components/TemplateInput';
+import { ParseModeSelector } from './components/ParseModeSelector';
 import { FileUploader } from './components/FileUploader';
 import { ProgressIndicator } from './components/ProgressIndicator';
 import { GoogleSignIn } from './components/GoogleSignIn';
@@ -12,7 +13,7 @@ import { PDFService } from './services/pdfService';
 import { GeminiService } from './services/geminiService';
 import { SlidesService } from './services/slidesService';
 import { GoogleAuthService, type GoogleAuthState } from './services/googleAuthService';
-import type { Theme, ActualTheme, ProcessingStatus, CandidateData, ProcessingError, GeminiModel } from './types';
+import type { Theme, ActualTheme, ProcessingStatus, CandidateData, ProcessingError, GeminiModel, ParseMode } from './types';
 
 function App() {
   // Theme state - track both preference and actual theme
@@ -38,6 +39,11 @@ function App() {
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
   const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.5-flash');
+
+  // Parse mode state
+  const [parseMode, setParseMode] = useState<ParseMode>(() =>
+    StorageService.getParseMode()
+  );
 
   // Google auth state
   const [googleAuth, setGoogleAuth] = useState<GoogleAuthState>({
@@ -150,6 +156,13 @@ function App() {
   const handleRemoveTemplate = () => {
     setTemplateId(null);
     StorageService.removeTemplateId();
+  };
+
+  // Parse mode handler
+  const handleParseModeChange = (mode: ParseMode) => {
+    setParseMode(mode);
+    StorageService.saveParseMode(mode);
+    console.log(`📋 Parse mode changed to: ${mode}`);
   };
 
   // Google auth handlers
@@ -355,6 +368,12 @@ function App() {
         existingTemplateId={templateId}
         onSave={handleSaveTemplate}
         onRemove={handleRemoveTemplate}
+        theme={actualTheme}
+      />
+
+      <ParseModeSelector
+        mode={parseMode}
+        onModeChange={handleParseModeChange}
         theme={actualTheme}
       />
 
