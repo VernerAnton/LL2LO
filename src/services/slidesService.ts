@@ -98,9 +98,8 @@ export class SlidesService {
     console.log(`📄 Phase 2: Getting objectId for slide at index ${slideIndex}...`);
 
     const response = await window.gapi.client.request({
-      path: `${this.SLIDES_API_BASE}/presentations/${presentationId}`,
-      method: 'GET',
-      params: { fields: 'slides.objectId' }
+      path: `${this.SLIDES_API_BASE}/presentations/${presentationId}?fields=slides.objectId`,
+      method: 'GET'
     });
 
     const slides = response.result.slides;
