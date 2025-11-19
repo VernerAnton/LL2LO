@@ -56,6 +56,9 @@ function App() {
   const [generatedSlidesUrl, setGeneratedSlidesUrl] = useState<string | null>(null);
   const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
 
+  // Reset feedback state
+  const [justReset, setJustReset] = useState(false);
+
   // Initialize Google Auth and Slides API on mount
   useEffect(() => {
     GoogleAuthService.initialize()
@@ -195,6 +198,11 @@ function App() {
     setProgressTotal(0);
     setGeneratedSlidesUrl(null);
     setIsGeneratingSlides(false);
+
+    // Show reset feedback
+    setJustReset(true);
+    setTimeout(() => setJustReset(false), 1500);
+
     // Note: User preferences persist (geminiApiKey, theme, templateId, selectedModel, googleAuth)
   };
 
@@ -368,8 +376,13 @@ function App() {
           className="reset-button"
           onClick={handleReset}
           title="Reset application"
+          style={{
+            borderColor: justReset ? '#4CAF50' : undefined,
+            color: justReset ? '#4CAF50' : undefined,
+            transition: 'all 0.3s ease'
+          }}
         >
-          [ ↻ RESET ]
+          {justReset ? '[ ✓ CLEARED ]' : '[ ↻ RESET ]'}
         </button>
       </div>
 
