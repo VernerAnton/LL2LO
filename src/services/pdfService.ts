@@ -8,6 +8,15 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs
 
 export class PDFService {
   /**
+   * Get total page count from PDF without parsing content
+   */
+  static async getPageCount(file: File): Promise<number> {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    return pdf.numPages;
+  }
+
+  /**
    * Parse PDF file and extract text from all pages
    */
   static async parsePDF(file: File): Promise<string[]> {
