@@ -1,10 +1,13 @@
 // localStorage/sessionStorage wrapper with type safety
 
+import type { ParseMode } from '../types';
+
 const STORAGE_KEYS = {
   GEMINI_API_KEY: 'gemini_api_key',
   TEMPLATE_ID: 'template_id',
   THEME: 'theme',
   SELECTED_MODEL: 'selected_model',
+  PARSE_MODE: 'll2pp_parse_mode',
 } as const;
 
 export class StorageService {
@@ -107,6 +110,22 @@ export class StorageService {
    */
   static getSelectedModel(): string {
     return localStorage.getItem(STORAGE_KEYS.SELECTED_MODEL) || 'gemini-2.5-flash';
+  }
+
+  /**
+   * Save parse mode preference
+   */
+  static saveParseMode(mode: ParseMode): void {
+    localStorage.setItem(STORAGE_KEYS.PARSE_MODE, mode);
+  }
+
+  /**
+   * Get parse mode preference
+   * Defaults to 'longlist' for first-time users
+   */
+  static getParseMode(): ParseMode {
+    const stored = localStorage.getItem(STORAGE_KEYS.PARSE_MODE);
+    return (stored === 'individual' || stored === 'longlist') ? stored : 'longlist';
   }
 
   /**

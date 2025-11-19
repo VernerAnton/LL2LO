@@ -113,3 +113,81 @@ input:focus {
   outline: none;
   box-shadow: 0 0 0 2px currentColor;
 }
+
+/* Parse Mode Selector */
+.parse-mode-selector {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 2px solid;
+}
+
+.mode-label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-weight: bold;
+  font-size: 0.875rem;
+}
+
+.mode-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.mode-button {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.875rem;
+  border: 2px solid;
+  background: transparent;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+}
+
+.mode-button:hover {
+  opacity: 0.7;
+}
+
+.mode-button.active {
+  background: currentColor;
+}
+
+.mode-description {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Light mode colors */
+.light-mode .parse-mode-selector {
+  border-color: #2a2a2a;
+}
+
+.light-mode .mode-button {
+  color: #2a2a2a;
+  border-color: #2a2a2a;
+}
+
+.light-mode .mode-button.active {
+  background: #2a2a2a;
+  color: #f4f1ea;
+}
+
+/* Dark mode colors */
+.dark-mode .parse-mode-selector {
+  border-color: #e0e0e0;
+}
+
+.dark-mode .mode-button {
+  color: #e0e0e0;
+  border-color: #e0e0e0;
+}
+
+.dark-mode .mode-button.active {
+  background: #e0e0e0;
+  color: #1a1a1a;
+}
