@@ -3,8 +3,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { CandidateData, WorkExperience, Education, GeminiModel } from '../types';
 import { RateLimiter } from './rateLimiter';
 
-// Rate limiter instance (4 seconds between requests = 15 RPM)
-const rateLimiter = new RateLimiter(4000);
+// Rate limiter instance (6 seconds between requests = 10 RPM)
+const rateLimiter = new RateLimiter(6000);
 
 export interface ExtractionResult {
   success: boolean;
