@@ -50,6 +50,32 @@ body.dark-mode {
   letter-spacing: 0.05em;
 }
 
+.reset-button {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  border: 2px solid;
+  background: transparent;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+}
+
+.light-mode .reset-button {
+  color: #2a2a2a;
+  border-color: #2a2a2a;
+}
+
+.dark-mode .reset-button {
+  color: #e0e0e0;
+  border-color: #e0e0e0;
+}
+
+.reset-button:hover {
+  opacity: 0.7;
+}
+
 .subtitle {
   text-align: center;
   opacity: 0.8;
