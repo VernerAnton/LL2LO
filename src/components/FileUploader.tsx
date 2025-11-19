@@ -1,14 +1,14 @@
 import { useState, DragEvent } from 'react';
 
 interface FileUploaderProps {
-  onFileSelect: (file: File) => void;
+  onFileSelect: (files: File[]) => void;
   theme: 'light' | 'dark';
   disabled?: boolean;
 }
 
 export function FileUploader({ onFileSelect, theme, disabled = false }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -26,23 +26,28 @@ export function FileUploader({ onFileSelect, theme, disabled = false }: FileUplo
     if (disabled) return;
 
     const files = Array.from(e.dataTransfer.files);
-    const pdfFile = files.find(f => f.type === 'application/pdf');
+    const pdfFiles = files.filter(f => f.type === 'application/pdf');
 
-    if (pdfFile) {
-      setSelectedFile(pdfFile);
-      onFileSelect(pdfFile);
+    if (pdfFiles.length > 0) {
+      setSelectedFiles(pdfFiles);
+      onFileSelect(pdfFiles);
     } else {
-      alert('Please upload a PDF file');
+      alert('Please upload PDF files');
     }
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      setSelectedFile(file);
-      onFileSelect(file);
-    } else {
-      alert('Please upload a PDF file');
+    const fileList = e.target.files;
+    if (fileList && fileList.length > 0) {
+      const filesArray = Array.from(fileList);
+      const pdfFiles = filesArray.filter(f => f.type === 'application/pdf');
+
+      if (pdfFiles.length > 0) {
+        setSelectedFiles(pdfFiles);
+        onFileSelect(pdfFiles);
+      } else {
+        alert('Please upload PDF files');
+      }
     }
   };
 
@@ -86,6 +91,7 @@ export function FileUploader({ onFileSelect, theme, disabled = false }: FileUplo
         <input
           type="file"
           accept=".pdf"
+          multiple
           onChange={handleFileInput}
           disabled={disabled}
           style={{
@@ -107,7 +113,7 @@ export function FileUploader({ onFileSelect, theme, disabled = false }: FileUplo
           📄
         </div>
 
-        {selectedFile ? (
+        {selectedFiles.length > 0 ? (
           <>
             <div style={{
               fontWeight: 'bold',
@@ -115,7 +121,10 @@ export function FileUploader({ onFileSelect, theme, disabled = false }: FileUplo
               color: textColor,
               pointerEvents: 'none'
             }}>
-              ✓ {selectedFile.name}
+              {selectedFiles.length === 1
+                ? `✓ ${selectedFiles[0].name}`
+                : `✓ ${selectedFiles.length} files selected`
+              }
             </div>
             <div style={{
               fontSize: '0.75rem',
@@ -123,7 +132,10 @@ export function FileUploader({ onFileSelect, theme, disabled = false }: FileUplo
               color: textColor,
               pointerEvents: 'none'
             }}>
-              {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+              {selectedFiles.length === 1
+                ? `${(selectedFiles[0].size / 1024 / 1024).toFixed(2)} MB`
+                : `${selectedFiles.map(f => f.name).join(', ')}`
+              }
             </div>
           </>
         ) : (
@@ -134,7 +146,7 @@ export function FileUploader({ onFileSelect, theme, disabled = false }: FileUplo
               color: textColor,
               pointerEvents: 'none'
             }}>
-              Drag & drop PDF here
+              Drag & drop PDF files here
             </div>
             <div style={{
               fontSize: '0.75rem',
@@ -154,7 +166,7 @@ export function FileUploader({ onFileSelect, theme, disabled = false }: FileUplo
         marginTop: '0.5rem',
         color: textColor
       }}>
-        Upload a PDF containing multiple CVs (LinkedIn exports)
+        Upload one or more PDF files
       </div>
     </div>
   );

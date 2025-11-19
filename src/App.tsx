@@ -31,7 +31,7 @@ function App() {
   );
 
   // File and processing state
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>('idle');
   const [_parsedCVs, setParsedCVs] = useState<any[]>([]);
   const [extractedCandidates, setExtractedCandidates] = useState<CandidateData[]>([]);
@@ -175,8 +175,8 @@ function App() {
   };
 
   // File upload handler
-  const handleFileSelect = async (file: File) => {
-    setUploadedFile(file);
+  const handleFileSelect = async (files: File[]) => {
+    setUploadedFiles(files);
     setParsedCVs([]);
     setExtractedCandidates([]);
     setFailedExtractions([]);
@@ -186,7 +186,7 @@ function App() {
 
   // Reset handler - clears all processing state
   const handleReset = () => {
-    setUploadedFile(null);
+    setUploadedFiles([]);
     setParsedCVs([]);
     setExtractedCandidates([]);
     setFailedExtractions([]);
@@ -200,8 +200,8 @@ function App() {
 
   // Parse PDF and extract data handler
   const handleParsePDF = async () => {
-    if (!uploadedFile) {
-      alert('Please upload a PDF file first');
+    if (uploadedFiles.length === 0) {
+      alert('Please upload at least one PDF file first');
       return;
     }
 
@@ -211,18 +211,46 @@ function App() {
     }
 
     try {
-      // Step 1: Parse PDF
+      // Step 1: Parse PDF(s) based on mode
       setProcessingStatus('parsing');
       setProgressCurrent(0);
       setProgressTotal(0);
 
-      console.log('📄 Parsing PDF...');
-      const cvs = await PDFService.parseAndSplit(uploadedFile);
+      console.log(`📄 Parsing ${uploadedFiles.length} PDF file(s) in ${parseMode} mode...`);
 
-      setParsedCVs(cvs);
-      setProgressTotal(cvs.length);
+      const allCVs: any[] = [];
 
-      console.log(`✅ Parsing complete! Found ${cvs.length} CVs`);
+      // Parse each file according to the selected mode
+      for (let fileIndex = 0; fileIndex < uploadedFiles.length; fileIndex++) {
+        const file = uploadedFiles[fileIndex];
+        console.log(`\n📄 Processing file ${fileIndex + 1}/${uploadedFiles.length}: ${file.name}`);
+
+        if (parseMode === 'longlist') {
+          // LONGLIST MODE: Split multi-CV PDF using "Page 1 of" detection
+          const cvs = await PDFService.parseAndSplit(file);
+          console.log(`   ✅ Found ${cvs.length} CVs in ${file.name}`);
+          allCVs.push(...cvs);
+        } else {
+          // INDIVIDUAL MODE: Each PDF = 1 CV (no splitting)
+          const pageTexts = await PDFService.parsePDF(file);
+          const pageCount = await PDFService.getPageCount(file);
+          const pageNumbers = Array.from({ length: pageCount }, (_, i) => i + 1);
+
+          const cv = {
+            text: pageTexts.join('\n\n'),
+            pageNumbers: pageNumbers,
+            fileName: file.name
+          };
+
+          console.log(`   ✅ Parsed ${file.name} (${pageCount} pages)`);
+          allCVs.push(cv);
+        }
+      }
+
+      setParsedCVs(allCVs);
+      setProgressTotal(allCVs.length);
+
+      console.log(`\n✅ Parsing complete! Total CVs to extract: ${allCVs.length}`);
 
       // Step 2: Extract data using Gemini AI
       setProcessingStatus('extracting');
@@ -231,11 +259,11 @@ function App() {
       const candidates: CandidateData[] = [];
       const errors: ProcessingError[] = [];
 
-      console.log(`🤖 Starting Gemini extraction for ${cvs.length} CVs...`);
+      console.log(`🤖 Starting Gemini extraction for ${allCVs.length} CVs...`);
 
-      for (let i = 0; i < cvs.length; i++) {
-        const cv = cvs[i];
-        console.log(`\n🔍 Extracting CV ${i + 1}/${cvs.length}...`);
+      for (let i = 0; i < allCVs.length; i++) {
+        const cv = allCVs[i];
+        console.log(`\n🔍 Extracting CV ${i + 1}/${allCVs.length}...`);
 
         setProgressCurrent(i + 1);
 
@@ -263,8 +291,8 @@ function App() {
 
       console.log('\n════════════════════════════════════════');
       console.log(`✅ Extraction complete!`);
-      console.log(`   - Successful: ${candidates.length}/${cvs.length}`);
-      console.log(`   - Failed: ${errors.length}/${cvs.length}`);
+      console.log(`   - Successful: ${candidates.length}/${allCVs.length}`);
+      console.log(`   - Failed: ${errors.length}/${allCVs.length}`);
       console.log('════════════════════════════════════════');
 
       if (errors.length > 0) {
@@ -325,7 +353,7 @@ function App() {
   const bgColor = actualTheme === 'dark' ? '#2a2a2a' : '#fefdfb';
   const textColor = actualTheme === 'dark' ? '#e0e0e0' : '#2a2a2a';
 
-  const canProcess = uploadedFile && geminiApiKey && processingStatus === 'idle';
+  const canProcess = uploadedFiles.length > 0 && geminiApiKey && processingStatus === 'idle';
 
   return (
     <div className="container">
@@ -384,7 +412,7 @@ function App() {
       />
 
       {/* AI Model Selector */}
-      {uploadedFile && geminiApiKey && (
+      {uploadedFiles.length > 0 && geminiApiKey && (
         <div style={{
           padding: '1.5rem',
           border: `2px solid ${borderColor}`,
@@ -459,7 +487,7 @@ function App() {
         theme={actualTheme}
       />
 
-      {uploadedFile && geminiApiKey && (
+      {uploadedFiles.length > 0 && geminiApiKey && (
         <div style={{
           padding: '1.5rem',
           border: `2px solid ${borderColor}`,
@@ -492,7 +520,7 @@ function App() {
             marginTop: '0.5rem',
             color: textColor
           }}>
-            Parse PDF + Extract with Gemini AI
+            Parse PDF(s) + Extract with Gemini AI
           </div>
         </div>
       )}
