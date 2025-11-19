@@ -171,6 +171,20 @@ function App() {
     setProcessingStatus('idle');
   };
 
+  // Reset handler - clears all processing state
+  const handleReset = () => {
+    setUploadedFile(null);
+    setParsedCVs([]);
+    setExtractedCandidates([]);
+    setFailedExtractions([]);
+    setProcessingStatus('idle');
+    setProgressCurrent(0);
+    setProgressTotal(0);
+    setGeneratedSlidesUrl(null);
+    setIsGeneratingSlides(false);
+    // Note: User preferences persist (geminiApiKey, theme, templateId, selectedModel, googleAuth)
+  };
+
   // Parse PDF and extract data handler
   const handleParsePDF = async () => {
     if (!uploadedFile) {
@@ -309,7 +323,13 @@ function App() {
           onToggle={handleThemeToggle}
         />
         <div className="title">════ LL2PP ════</div>
-        <div style={{ width: '80px' }}></div>
+        <button
+          className="reset-button"
+          onClick={handleReset}
+          title="Reset application"
+        >
+          [ ↻ RESET ]
+        </button>
       </div>
 
       <div className="subtitle">
