@@ -422,6 +422,7 @@ function App() {
         onFileSelect={handleFileSelect}
         theme={actualTheme}
         disabled={processingStatus !== 'idle' && processingStatus !== 'done' && processingStatus !== 'error'}
+        parseMode={parseMode}
       />
 
       {/* AI Model Selector */}
