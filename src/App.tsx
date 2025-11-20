@@ -58,6 +58,7 @@ function App() {
 
   // Reset feedback state
   const [justReset, setJustReset] = useState(false);
+  const [fileUploaderKey, setFileUploaderKey] = useState(0);
 
   // Initialize Google Auth and Slides API on mount
   useEffect(() => {
@@ -198,6 +199,7 @@ function App() {
     setProgressTotal(0);
     setGeneratedSlidesUrl(null);
     setIsGeneratingSlides(false);
+    setFileUploaderKey(prev => prev + 1); // Force FileUploader to remount and clear selection
 
     // Show reset feedback
     setJustReset(true);
@@ -419,6 +421,7 @@ function App() {
       />
 
       <FileUploader
+        key={fileUploaderKey}
         onFileSelect={handleFileSelect}
         theme={actualTheme}
         disabled={processingStatus !== 'idle' && processingStatus !== 'done' && processingStatus !== 'error'}
