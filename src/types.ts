@@ -5,7 +5,7 @@ export type ActualTheme = 'light' | 'dark'; // What actually gets applied to UI
 
 export type ProcessingStatus = 'idle' | 'parsing' | 'extracting' | 'generating' | 'done' | 'error';
 
-export type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.5-pro';
+export type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-3-pro-preview';
 
 export type OutputMethod = 'slides' | 'manual';
 

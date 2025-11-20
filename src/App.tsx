@@ -443,7 +443,7 @@ function App() {
             [ 🤖 SELECT AI MODEL ]
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={() => setSelectedModel('gemini-2.5-flash')}
               style={{
@@ -458,7 +458,7 @@ function App() {
                 fontSize: '0.875rem'
               }}
             >
-              FLASH (Fast)
+              2.5 FLASH
             </button>
 
             <button
@@ -475,7 +475,24 @@ function App() {
                 fontSize: '0.875rem'
               }}
             >
-              PRO (Accurate)
+              2.5 PRO
+            </button>
+
+            <button
+              onClick={() => setSelectedModel('gemini-3-pro-preview')}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: selectedModel === 'gemini-3-pro-preview' ? textColor : 'none',
+                border: `2px solid ${borderColor}`,
+                color: selectedModel === 'gemini-3-pro-preview' ? bgColor : textColor,
+                fontFamily: 'Courier New, monospace',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                letterSpacing: '0.1em',
+                fontSize: '0.875rem'
+              }}
+            >
+              3.0 PRO 🆕
             </button>
           </div>
 
@@ -486,9 +503,9 @@ function App() {
             textAlign: 'center',
             color: textColor
           }}>
-            {selectedModel === 'gemini-2.5-flash'
-              ? '⚡ Faster processing, may require retries for some CVs'
-              : '🎯 More reliable extraction, slower processing'}
+            {selectedModel === 'gemini-2.5-flash' && '⚡ Fast processing, good for most CVs'}
+            {selectedModel === 'gemini-2.5-pro' && '🎯 More reliable extraction, slower'}
+            {selectedModel === 'gemini-3-pro-preview' && '🚀 Latest model, best accuracy (Nov 2025)'}
           </div>
         </div>
       )}
