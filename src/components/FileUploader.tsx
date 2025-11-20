@@ -1,14 +1,18 @@
 import { useState, DragEvent } from 'react';
+import type { ParseMode } from '../types';
 
 interface FileUploaderProps {
   onFileSelect: (files: File[]) => void;
   theme: 'light' | 'dark';
   disabled?: boolean;
+  parseMode: ParseMode;
 }
 
-export function FileUploader({ onFileSelect, theme, disabled = false }: FileUploaderProps) {
+export function FileUploader({ onFileSelect, theme, disabled = false, parseMode }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+
+  const allowMultiple = parseMode === 'individual';
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -29,8 +33,9 @@ export function FileUploader({ onFileSelect, theme, disabled = false }: FileUplo
     const pdfFiles = files.filter(f => f.type === 'application/pdf');
 
     if (pdfFiles.length > 0) {
-      setSelectedFiles(pdfFiles);
-      onFileSelect(pdfFiles);
+      const filesToSelect = allowMultiple ? pdfFiles : [pdfFiles[0]];
+      setSelectedFiles(filesToSelect);
+      onFileSelect(filesToSelect);
     } else {
       alert('Please upload PDF files');
     }
@@ -43,8 +48,9 @@ export function FileUploader({ onFileSelect, theme, disabled = false }: FileUplo
       const pdfFiles = filesArray.filter(f => f.type === 'application/pdf');
 
       if (pdfFiles.length > 0) {
-        setSelectedFiles(pdfFiles);
-        onFileSelect(pdfFiles);
+        const filesToSelect = allowMultiple ? pdfFiles : [pdfFiles[0]];
+        setSelectedFiles(filesToSelect);
+        onFileSelect(filesToSelect);
       } else {
         alert('Please upload PDF files');
       }
@@ -91,7 +97,7 @@ export function FileUploader({ onFileSelect, theme, disabled = false }: FileUplo
         <input
           type="file"
           accept=".pdf"
-          multiple
+          multiple={allowMultiple}
           onChange={handleFileInput}
           disabled={disabled}
           style={{
@@ -146,7 +152,7 @@ export function FileUploader({ onFileSelect, theme, disabled = false }: FileUplo
               color: textColor,
               pointerEvents: 'none'
             }}>
-              Drag & drop PDF files here
+              {allowMultiple ? 'Drag & drop PDF files here' : 'Drag & drop PDF file here'}
             </div>
             <div style={{
               fontSize: '0.75rem',
@@ -166,7 +172,10 @@ export function FileUploader({ onFileSelect, theme, disabled = false }: FileUplo
         marginTop: '0.5rem',
         color: textColor
       }}>
-        Upload one or more PDF files
+        {allowMultiple
+          ? 'Upload one or more PDF files (Individual mode)'
+          : 'Upload one PDF file (Longlist mode)'
+        }
       </div>
     </div>
   );
