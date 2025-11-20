@@ -45,7 +45,7 @@ export class GeminiService {
   }
 
   /**
-   * Extract with retry logic (3 attempts with exponential backoff)
+   * Extract with retry logic (3 attempts with rate-limit-respecting delays)
    */
   private static async extractWithRetry(
     cvText: string,
@@ -53,7 +53,7 @@ export class GeminiService {
     attempt: number = 1
   ): Promise<ExtractionResult> {
     const maxAttempts = 3;
-    const delays = [1000, 2000, 4000]; // 1s, 2s, 4s
+    const delays = [6000, 12000, 18000]; // 6s, 12s, 18s (respects 10 RPM limit)
 
     try {
       const result = await this.performExtraction(cvText, model);
@@ -63,7 +63,7 @@ export class GeminiService {
 
       if (attempt < maxAttempts) {
         const delay = delays[attempt - 1];
-        console.log(`⏳ Retrying in ${delay}ms... (attempt ${attempt + 1}/${maxAttempts})`);
+        console.log(`⏳ Retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxAttempts})`);
         await this.sleep(delay);
         return this.extractWithRetry(cvText, model, attempt + 1);
       }
