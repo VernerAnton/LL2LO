@@ -215,13 +215,14 @@ export class SlidesService {
 
     // Add duplication requests (for slides 2, 3, 4, ...)
     duplicatedSlideIds.forEach((newSlideId, index) => {
-      console.log(`   Duplication ${index + 1}: ${slide2ObjectId} → ${newSlideId}`);
+      console.log(`   Duplication ${index + 1}: ${slide2ObjectId} → ${newSlideId} at position ${2 + index}`);
       allRequests.push({
         duplicateObject: {
           objectId: slide2ObjectId,
           objectIds: {
             [slide2ObjectId]: newSlideId
-          }
+          },
+          insertionIndex: 2 + index  // Insert after title slide (0) and original Slide 2 (1)
         }
       });
     });
