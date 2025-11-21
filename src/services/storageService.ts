@@ -1,6 +1,6 @@
 // localStorage/sessionStorage wrapper with type safety
 
-import type { ParseMode } from '../types';
+import type { ParseMode, ApiTier } from '../types';
 
 const STORAGE_KEYS = {
   GEMINI_API_KEY: 'gemini_api_key',
@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   THEME: 'theme',
   SELECTED_MODEL: 'selected_model',
   PARSE_MODE: 'll2pp_parse_mode',
+  API_TIER: 'll2pp_api_tier',
 } as const;
 
 export class StorageService {
@@ -126,6 +127,22 @@ export class StorageService {
   static getParseMode(): ParseMode {
     const stored = localStorage.getItem(STORAGE_KEYS.PARSE_MODE);
     return (stored === 'individual' || stored === 'longlist') ? stored : 'longlist';
+  }
+
+  /**
+   * Save API tier preference
+   */
+  static saveApiTier(tier: ApiTier): void {
+    localStorage.setItem(STORAGE_KEYS.API_TIER, tier);
+  }
+
+  /**
+   * Get API tier preference
+   * Defaults to 'free' for first-time users
+   */
+  static getApiTier(): ApiTier {
+    const stored = localStorage.getItem(STORAGE_KEYS.API_TIER);
+    return (stored === 'free' || stored === 'paid') ? stored : 'free';
   }
 
   /**

@@ -11,6 +11,8 @@ export type OutputMethod = 'slides' | 'manual';
 
 export type ParseMode = 'longlist' | 'individual';
 
+export type ApiTier = 'free' | 'paid';
+
 export interface WorkExperience {
   jobTitle: string;
   company: string;

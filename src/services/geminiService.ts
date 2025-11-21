@@ -1,9 +1,9 @@
 // Gemini AI service for CV data extraction
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { CandidateData, WorkExperience, Education, GeminiModel } from '../types';
+import type { CandidateData, WorkExperience, Education, GeminiModel, ApiTier } from '../types';
 import { RateLimiter } from './rateLimiter';
 
-// Rate limiter instance (6 seconds between requests = 10 RPM)
+// Rate limiter instance (initially configured for free tier)
 const rateLimiter = new RateLimiter(6000);
 
 export interface ExtractionResult {
@@ -15,6 +15,7 @@ export interface ExtractionResult {
 export class GeminiService {
   private static genAI: GoogleGenerativeAI | null = null;
   private static apiKey: string | null = null;
+  private static retryDelays: number[] = [6000, 12000, 18000]; // Default: Free tier
 
   /**
    * Initialize Gemini AI with API key
@@ -22,6 +23,23 @@ export class GeminiService {
   static initialize(apiKey: string): void {
     this.apiKey = apiKey;
     this.genAI = new GoogleGenerativeAI(apiKey);
+  }
+
+  /**
+   * Configure rate limiting based on API tier
+   */
+  static setApiTier(tier: ApiTier): void {
+    if (tier === 'free') {
+      // Free tier: 10 RPM
+      rateLimiter.setDelay(6000); // 6s between requests
+      this.retryDelays = [6000, 12000, 18000]; // 6s, 12s, 18s
+      console.log('🔧 API Tier: FREE (10 RPM, slower retries)');
+    } else {
+      // Paid tier: 600 RPM (safe buffer under 1000 RPM limit)
+      rateLimiter.setDelay(100); // 100ms between requests
+      this.retryDelays = [1000, 2000, 4000]; // 1s, 2s, 4s
+      console.log('🔧 API Tier: PAID (600 RPM, fast retries)');
+    }
   }
 
   /**
@@ -45,7 +63,7 @@ export class GeminiService {
   }
 
   /**
-   * Extract with retry logic (3 attempts with rate-limit-respecting delays)
+   * Extract with retry logic (3 attempts with tier-appropriate delays)
    */
   private static async extractWithRetry(
     cvText: string,
@@ -53,7 +71,6 @@ export class GeminiService {
     attempt: number = 1
   ): Promise<ExtractionResult> {
     const maxAttempts = 3;
-    const delays = [6000, 12000, 18000]; // 6s, 12s, 18s (respects 10 RPM limit)
 
     try {
       const result = await this.performExtraction(cvText, model);
@@ -62,7 +79,7 @@ export class GeminiService {
       console.error(`❌ Extraction attempt ${attempt} failed:`, error.message);
 
       if (attempt < maxAttempts) {
-        const delay = delays[attempt - 1];
+        const delay = this.retryDelays[attempt - 1];
         console.log(`⏳ Retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxAttempts})`);
         await this.sleep(delay);
         return this.extractWithRetry(cvText, model, attempt + 1);
