@@ -4,6 +4,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { ApiKeyInput } from './components/ApiKeyInput';
 import { TemplateInput } from './components/TemplateInput';
 import { ParseModeSelector } from './components/ParseModeSelector';
+import { ApiTierSelector } from './components/ApiTierSelector';
 import { FileUploader } from './components/FileUploader';
 import { ProgressIndicator } from './components/ProgressIndicator';
 import { GoogleSignIn } from './components/GoogleSignIn';
@@ -13,7 +14,7 @@ import { PDFService } from './services/pdfService';
 import { GeminiService } from './services/geminiService';
 import { SlidesService } from './services/slidesService';
 import { GoogleAuthService, type GoogleAuthState } from './services/googleAuthService';
-import type { Theme, ActualTheme, ProcessingStatus, CandidateData, ProcessingError, GeminiModel, ParseMode } from './types';
+import type { Theme, ActualTheme, ProcessingStatus, CandidateData, ProcessingError, GeminiModel, ParseMode, ApiTier } from './types';
 
 function App() {
   // Theme state - track both preference and actual theme
@@ -43,6 +44,11 @@ function App() {
   // Parse mode state
   const [parseMode, setParseMode] = useState<ParseMode>(() =>
     StorageService.getParseMode()
+  );
+
+  // API tier state
+  const [apiTier, setApiTier] = useState<ApiTier>(() =>
+    StorageService.getApiTier()
   );
 
   // Google auth state
@@ -89,6 +95,11 @@ function App() {
       console.log('✅ Gemini AI initialized');
     }
   }, [geminiApiKey]);
+
+  // Configure API tier for rate limiting
+  useEffect(() => {
+    GeminiService.setApiTier(apiTier);
+  }, [apiTier]);
 
   // Update body class when actual theme changes
   useEffect(() => {
@@ -167,6 +178,13 @@ function App() {
     setParseMode(mode);
     StorageService.saveParseMode(mode);
     console.log(`📋 Parse mode changed to: ${mode}`);
+  };
+
+  // API tier handler
+  const handleApiTierChange = (tier: ApiTier) => {
+    setApiTier(tier);
+    StorageService.saveApiTier(tier);
+    console.log(`🔑 API tier changed to: ${tier.toUpperCase()}`);
   };
 
   // Google auth handlers
@@ -411,6 +429,12 @@ function App() {
         existingTemplateId={templateId}
         onSave={handleSaveTemplate}
         onRemove={handleRemoveTemplate}
+        theme={actualTheme}
+      />
+
+      <ApiTierSelector
+        tier={apiTier}
+        onTierChange={handleApiTierChange}
         theme={actualTheme}
       />
 

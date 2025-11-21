@@ -83,4 +83,11 @@ export class RateLimiter {
     });
     this.queue = [];
   }
+
+  /**
+   * Update the minimum delay between requests
+   */
+  setDelay(delayMs: number): void {
+    this.minDelayMs = delayMs;
+  }
 }
