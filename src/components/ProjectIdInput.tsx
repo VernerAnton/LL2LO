@@ -1,20 +1,20 @@
 import { useState } from 'react';
 
-interface ApiKeyInputProps {
-  existingKey: string | null;
-  onSave: (key: string) => void;
+interface ProjectIdInputProps {
+  existingProjectId: string | null;
+  onSave: (projectId: string) => void;
   onRemove: () => void;
   theme: 'light' | 'dark';
 }
 
-export function ApiKeyInput({ existingKey, onSave, onRemove, theme }: ApiKeyInputProps) {
-  const [isEditing, setIsEditing] = useState(!existingKey);
-  const [keyInput, setKeyInput] = useState('');
+export function ProjectIdInput({ existingProjectId, onSave, onRemove, theme }: ProjectIdInputProps) {
+  const [isEditing, setIsEditing] = useState(!existingProjectId);
+  const [projectIdInput, setProjectIdInput] = useState('');
 
   const handleSave = () => {
-    if (keyInput.trim()) {
-      onSave(keyInput.trim());
-      setKeyInput('');
+    if (projectIdInput.trim()) {
+      onSave(projectIdInput.trim());
+      setProjectIdInput('');
       setIsEditing(false);
     }
   };
@@ -28,7 +28,7 @@ export function ApiKeyInput({ existingKey, onSave, onRemove, theme }: ApiKeyInpu
   const bgColor = theme === 'dark' ? '#2a2a2a' : '#fefdfb';
   const textColor = theme === 'dark' ? '#e0e0e0' : '#2a2a2a';
 
-  if (existingKey && !isEditing) {
+  if (existingProjectId && !isEditing) {
     return (
       <div style={{
         padding: '1.5rem',
@@ -45,14 +45,14 @@ export function ApiKeyInput({ existingKey, onSave, onRemove, theme }: ApiKeyInpu
               marginBottom: '0.5rem',
               color: textColor
             }}>
-              [ GEMINI API KEY SAVED ]
+              [ GOOGLE CLOUD PROJECT ID SAVED ]
             </div>
             <div style={{
               fontFamily: 'Courier New, monospace',
               fontSize: '0.875rem',
               color: textColor
             }}>
-              {existingKey.slice(0, 8)}...{existingKey.slice(-4)}
+              {existingProjectId}
             </div>
           </div>
           <button
@@ -69,7 +69,7 @@ export function ApiKeyInput({ existingKey, onSave, onRemove, theme }: ApiKeyInpu
               fontSize: '0.75rem'
             }}
           >
-            [ CHANGE KEY ]
+            [ CHANGE PROJECT ]
           </button>
         </div>
       </div>
@@ -91,14 +91,14 @@ export function ApiKeyInput({ existingKey, onSave, onRemove, theme }: ApiKeyInpu
         letterSpacing: '0.1em',
         color: textColor
       }}>
-        [ ENTER GEMINI API KEY ]
+        [ ENTER GOOGLE CLOUD PROJECT ID ]
       </div>
       <div style={{ display: 'flex', gap: '1rem' }}>
         <input
           type="text"
-          value={keyInput}
-          onChange={(e) => setKeyInput(e.target.value)}
-          placeholder="AIza..."
+          value={projectIdInput}
+          onChange={(e) => setProjectIdInput(e.target.value)}
+          placeholder="my-project-123"
           style={{
             flex: 1,
             padding: '0.75rem',
@@ -112,7 +112,7 @@ export function ApiKeyInput({ existingKey, onSave, onRemove, theme }: ApiKeyInpu
         />
         <button
           onClick={handleSave}
-          disabled={!keyInput.trim()}
+          disabled={!projectIdInput.trim()}
           style={{
             padding: '0.75rem 1.5rem',
             background: 'none',
@@ -120,10 +120,10 @@ export function ApiKeyInput({ existingKey, onSave, onRemove, theme }: ApiKeyInpu
             color: textColor,
             fontFamily: 'Courier New, monospace',
             fontWeight: 'bold',
-            cursor: keyInput.trim() ? 'pointer' : 'not-allowed',
+            cursor: projectIdInput.trim() ? 'pointer' : 'not-allowed',
             letterSpacing: '0.05em',
             fontSize: '0.875rem',
-            opacity: keyInput.trim() ? 1 : 0.5
+            opacity: projectIdInput.trim() ? 1 : 0.5
           }}
         >
           [ SAVE ]
@@ -135,7 +135,7 @@ export function ApiKeyInput({ existingKey, onSave, onRemove, theme }: ApiKeyInpu
         marginTop: '0.5rem',
         color: textColor
       }}>
-        Get your API key from: https://aistudio.google.com/apikey
+        Billing for AI usage will be charged to this project. You must have the Vertex AI API enabled.
       </div>
     </div>
   );
