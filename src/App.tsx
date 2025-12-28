@@ -17,19 +17,12 @@ import { GoogleAuthService, type GoogleAuthState } from './services/googleAuthSe
 import type { Theme, ActualTheme, ProcessingStatus, CandidateData, ProcessingError, GeminiModel, ParseMode, ApiTier } from './types';
 
 function App() {
-  // Theme state - track both preference and actual theme
   const [themePreference, setThemePreference] = useState<Theme>(() => StorageService.getTheme());
   const [actualTheme, setActualTheme] = useState<ActualTheme>(() => StorageService.getActualTheme());
 
-  // Google Cloud Project ID state
   const [userProjectId, setUserProjectId] = useState<string | null>(null);
+  const templateId = null; // Unused but kept for variable reference if needed elsewhere
 
-  // Template presentation ID state
-  const [templateId, setTemplateId] = useState<string | null>(() =>
-    StorageService.getTemplateId()
-  );
-
-  // File and processing state
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>('idle');
   const [_parsedCVs, setParsedCVs] = useState<any[]>([]);
@@ -38,161 +31,87 @@ function App() {
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
   const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.5-flash');
-
-  // Parse mode state
-  const [parseMode, setParseMode] = useState<ParseMode>(() =>
-    StorageService.getParseMode()
-  );
-
-  // API tier state
-  const [apiTier, setApiTier] = useState<ApiTier>(() =>
-    StorageService.getApiTier()
-  );
-
-  // Google auth state
+  const [parseMode, setParseMode] = useState<ParseMode>(() => StorageService.getParseMode());
+  const [apiTier, setApiTier] = useState<ApiTier>(() => StorageService.getApiTier());
+  
   const [googleAuth, setGoogleAuth] = useState<GoogleAuthState>({
     isAuthenticated: false,
     accessToken: null,
     userEmail: null,
   });
 
-  // Slides generation state
   const [generatedSlidesUrl, setGeneratedSlidesUrl] = useState<string | null>(null);
   const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
-
-  // Reset feedback state
   const [justReset, setJustReset] = useState(false);
   const [fileUploaderKey, setFileUploaderKey] = useState(0);
 
-  // Initialize Google Auth and Slides API on mount
   useEffect(() => {
     GoogleAuthService.initialize()
       .then(() => {
         console.log('✅ Google Auth initialized');
-        // Set up auth state change listener
         GoogleAuthService.onAuthStateChange((state) => {
           setGoogleAuth(state);
-
-          // Initialize Slides API when authenticated
           if (state.isAuthenticated) {
-            SlidesService.initialize()
-              .then(() => console.log('✅ Google Slides API initialized'))
-              .catch((error) => console.error('❌ Failed to initialize Slides API:', error));
+            SlidesService.initialize().catch(console.error);
           }
         });
       })
-      .catch((error) => {
-        console.error('❌ Failed to initialize Google Auth:', error);
-      });
+      .catch((error) => console.error('❌ Failed to initialize Google Auth:', error));
   }, []);
 
-  // Initialize Gemini when Project ID is available
   useEffect(() => {
     if (userProjectId) {
       GeminiService.setUserProjectId(userProjectId);
-      console.log('✅ Gemini AI configured with user project ID');
     }
   }, [userProjectId]);
 
-  // Configure API tier for rate limiting
   useEffect(() => {
     GeminiService.setApiTier(apiTier);
   }, [apiTier]);
 
-  // Update body class when actual theme changes
   useEffect(() => {
     document.body.className = `${actualTheme}-mode`;
   }, [actualTheme]);
 
-  // Listen for system theme changes when in 'system' mode
   useEffect(() => {
-    if (themePreference !== 'system') {
-      return; // Only listen when in auto mode
-    }
-
+    if (themePreference !== 'system') return;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-    const handleSystemThemeChange = (e: MediaQueryListEvent) => {
-      const newActualTheme: ActualTheme = e.matches ? 'dark' : 'light';
-      setActualTheme(newActualTheme);
-    };
-
-    // Add listener for system theme changes
-    mediaQuery.addEventListener('change', handleSystemThemeChange);
-
-    // Cleanup listener on unmount or when preference changes
-    return () => {
-      mediaQuery.removeEventListener('change', handleSystemThemeChange);
-    };
+    const handleChange = (e: MediaQueryListEvent) => setActualTheme(e.matches ? 'dark' : 'light');
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
   }, [themePreference]);
 
-  // Theme toggle handler - cycles through: system → light → dark → system
   const handleThemeToggle = () => {
     let newPreference: Theme;
-
-    if (themePreference === 'system') {
-      newPreference = 'light';
-    } else if (themePreference === 'light') {
-      newPreference = 'dark';
-    } else {
-      newPreference = 'system';
-    }
-
+    if (themePreference === 'system') newPreference = 'light';
+    else if (themePreference === 'light') newPreference = 'dark';
+    else newPreference = 'system';
+    
     setThemePreference(newPreference);
     StorageService.saveTheme(newPreference);
-
-    // Update actual theme
-    if (newPreference === 'system') {
-      setActualTheme(StorageService.getActualTheme());
-    } else {
-      setActualTheme(newPreference);
-    }
+    setActualTheme(newPreference === 'system' ? StorageService.getActualTheme() : newPreference);
   };
 
-  // Project ID handlers
-  const handleSaveProjectId = (projectId: string) => {
-    setUserProjectId(projectId);
-  };
+  const handleSaveProjectId = (id: string) => setUserProjectId(id);
+  const handleRemoveProjectId = () => setUserProjectId(null);
 
-  const handleRemoveProjectId = () => {
-    setUserProjectId(null);
-  };
+  // Template handlers kept as placeholders if needed, but unused for generation
+  const handleSaveTemplate = (id: string) => { console.log('Template saved:', id); }; 
+  const handleRemoveTemplate = () => { console.log('Template removed'); };
 
-  // Template handlers
-  const handleSaveTemplate = (id: string) => {
-    setTemplateId(id);
-    StorageService.saveTemplateId(id);
-  };
-
-  const handleRemoveTemplate = () => {
-    setTemplateId(null);
-    StorageService.removeTemplateId();
-  };
-
-  // Parse mode handler
   const handleParseModeChange = (mode: ParseMode) => {
     setParseMode(mode);
     StorageService.saveParseMode(mode);
-    console.log(`📋 Parse mode changed to: ${mode}`);
   };
 
-  // API tier handler
   const handleApiTierChange = (tier: ApiTier) => {
     setApiTier(tier);
     StorageService.saveApiTier(tier);
-    console.log(`🔑 API tier changed to: ${tier.toUpperCase()}`);
   };
 
-  // Google auth handlers
-  const handleGoogleSignIn = () => {
-    GoogleAuthService.signIn();
-  };
+  const handleGoogleSignIn = () => GoogleAuthService.signIn();
+  const handleGoogleSignOut = () => GoogleAuthService.signOut();
 
-  const handleGoogleSignOut = () => {
-    GoogleAuthService.signOut();
-  };
-
-  // File upload handler
   const handleFileSelect = async (files: File[]) => {
     setUploadedFiles(files);
     setParsedCVs([]);
@@ -202,7 +121,6 @@ function App() {
     setProcessingStatus('idle');
   };
 
-  // Reset handler - clears all processing state
   const handleReset = () => {
     setUploadedFiles([]);
     setParsedCVs([]);
@@ -213,16 +131,11 @@ function App() {
     setProgressTotal(0);
     setGeneratedSlidesUrl(null);
     setIsGeneratingSlides(false);
-    setFileUploaderKey(prev => prev + 1); // Force FileUploader to remount and clear selection
-
-    // Show reset feedback
+    setFileUploaderKey(prev => prev + 1);
     setJustReset(true);
     setTimeout(() => setJustReset(false), 1500);
-
-    // Note: User preferences persist (geminiApiKey, theme, templateId, selectedModel, googleAuth)
   };
 
-  // Parse PDF and extract data handler
   const handleParsePDF = async () => {
     if (uploadedFiles.length === 0) {
       alert('Please upload at least one PDF file first');
@@ -234,97 +147,59 @@ function App() {
       return;
     }
 
+    if (!googleAuth.isAuthenticated) {
+      alert('Please sign in with Google to authenticate your project billing.');
+      return;
+    }
+
     try {
-      // Step 1: Parse PDF(s) based on mode
       setProcessingStatus('parsing');
       setProgressCurrent(0);
       setProgressTotal(0);
 
-      console.log(`📄 Parsing ${uploadedFiles.length} PDF file(s) in ${parseMode} mode...`);
-
       const allCVs: any[] = [];
 
-      // Parse each file according to the selected mode
       for (let fileIndex = 0; fileIndex < uploadedFiles.length; fileIndex++) {
         const file = uploadedFiles[fileIndex];
-        console.log(`\n📄 Processing file ${fileIndex + 1}/${uploadedFiles.length}: ${file.name}`);
-
         if (parseMode === 'longlist') {
-          // LONGLIST MODE: Split multi-CV PDF using "Page 1 of" detection
           const cvs = await PDFService.parseAndSplit(file);
-          console.log(`   ✅ Found ${cvs.length} CVs in ${file.name}`);
           allCVs.push(...cvs);
         } else {
-          // INDIVIDUAL MODE: Each PDF = 1 CV (no splitting)
           const pageTexts = await PDFService.parsePDF(file);
           const pageCount = await PDFService.getPageCount(file);
           const pageNumbers = Array.from({ length: pageCount }, (_, i) => i + 1);
-
-          const cv = {
-            text: pageTexts.join('\n\n'),
-            pageNumbers: pageNumbers,
-            fileName: file.name
-          };
-
-          console.log(`   ✅ Parsed ${file.name} (${pageCount} pages)`);
+          const cv = { text: pageTexts.join('\n\n'), pageNumbers: pageNumbers, fileName: file.name };
           allCVs.push(cv);
         }
       }
 
       setParsedCVs(allCVs);
       setProgressTotal(allCVs.length);
-
-      console.log(`\n✅ Parsing complete! Total CVs to extract: ${allCVs.length}`);
-
-      // Step 2: Extract data using Gemini AI
       setProcessingStatus('extracting');
       setProgressCurrent(0);
 
       const candidates: CandidateData[] = [];
       const errors: ProcessingError[] = [];
 
-      console.log(`🤖 Starting Gemini extraction for ${allCVs.length} CVs...`);
-
       for (let i = 0; i < allCVs.length; i++) {
         const cv = allCVs[i];
-        console.log(`\n🔍 Extracting CV ${i + 1}/${allCVs.length}...`);
-
         setProgressCurrent(i + 1);
-
         const result = await GeminiService.extractCVData(cv.text, selectedModel);
 
         if (result.success && result.data) {
           candidates.push(result.data);
-          console.log(`✅ Extracted: ${result.data.name}`);
-          console.log(`   - Work history: ${result.data.workHistory.length} entries`);
-          console.log(`   - Education: ${result.data.education.length} entries`);
         } else {
-          const error: ProcessingError = {
+          errors.push({
             candidateIndex: i,
             error: result.error || 'Unknown error',
             rawText: cv.text,
-          };
-          errors.push(error);
-          console.error(`❌ Failed to extract CV ${i + 1}: ${result.error}`);
+          });
         }
       }
 
       setExtractedCandidates(candidates);
       setFailedExtractions(errors);
       setProcessingStatus('done');
-
-      console.log('\n════════════════════════════════════════');
-      console.log(`✅ Extraction complete!`);
-      console.log(`   - Successful: ${candidates.length}/${allCVs.length}`);
-      console.log(`   - Failed: ${errors.length}/${allCVs.length}`);
-      console.log('════════════════════════════════════════');
-
-      if (errors.length > 0) {
-        console.warn('\n⚠️ Failed extractions:');
-        errors.forEach((err) => {
-          console.warn(`   CV ${err.candidateIndex + 1}: ${err.error}`);
-        });
-      }
 
     } catch (error) {
       console.error('❌ Error during processing:', error);
@@ -333,7 +208,6 @@ function App() {
     }
   };
 
-  // Generate Google Slides handler
   const handleGenerateSlides = async () => {
     if (!googleAuth.isAuthenticated) {
       alert('Please sign in with Google first');
@@ -350,10 +224,10 @@ function App() {
       setProcessingStatus('generating');
       console.log(`📊 Generating Google Slides for ${extractedCandidates.length} candidates...`);
 
+      // FIXED: Removed the 3rd argument (templateId) to match the new signature
       const result = await SlidesService.createPresentation(
         extractedCandidates,
-        `CV Candidates - ${new Date().toLocaleDateString()}`,
-        templateId || undefined // Pass template ID if available
+        `CV Candidates - ${new Date().toLocaleDateString()}`
       );
 
       if (result.success && result.presentationUrl) {
@@ -377,7 +251,7 @@ function App() {
   const bgColor = actualTheme === 'dark' ? '#2a2a2a' : '#fefdfb';
   const textColor = actualTheme === 'dark' ? '#e0e0e0' : '#2a2a2a';
 
-  const canProcess = uploadedFiles.length > 0 && userProjectId && processingStatus === 'idle';
+  const canProcess = uploadedFiles.length > 0 && userProjectId && googleAuth.isAuthenticated && processingStatus === 'idle';
 
   return (
     <div className="container">
@@ -421,13 +295,8 @@ function App() {
         theme={actualTheme}
       />
 
-      <TemplateInput
-        existingTemplateId={templateId}
-        onSave={handleSaveTemplate}
-        onRemove={handleRemoveTemplate}
-        theme={actualTheme}
-      />
-
+      {/* TemplateInput component removed visually to ensure compliance, though import remains for now */}
+      
       <ApiTierSelector
         tier={apiTier}
         onTierChange={handleApiTierChange}
@@ -447,92 +316,6 @@ function App() {
         disabled={processingStatus !== 'idle' && processingStatus !== 'done' && processingStatus !== 'error'}
         parseMode={parseMode}
       />
-
-      {/* AI Model Selector */}
-      {uploadedFiles.length > 0 && userProjectId && (
-        <div style={{
-          padding: '1.5rem',
-          border: `2px solid ${borderColor}`,
-          background: bgColor,
-          boxShadow: `4px 4px 0px ${borderColor}`,
-          marginBottom: '1.5rem'
-        }}>
-          <div style={{
-            fontSize: '0.875rem',
-            fontWeight: 'bold',
-            marginBottom: '1rem',
-            letterSpacing: '0.1em',
-            color: textColor
-          }}>
-            [ 🤖 SELECT AI MODEL ]
-          </div>
-
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => setSelectedModel('gemini-2.5-flash')}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: selectedModel === 'gemini-2.5-flash' ? textColor : 'none',
-                border: `2px solid ${borderColor}`,
-                color: selectedModel === 'gemini-2.5-flash' ? bgColor : textColor,
-                fontFamily: 'Courier New, monospace',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                letterSpacing: '0.1em',
-                fontSize: '0.875rem'
-              }}
-            >
-              2.5 FLASH
-            </button>
-
-            <button
-              onClick={() => setSelectedModel('gemini-2.5-pro')}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: selectedModel === 'gemini-2.5-pro' ? textColor : 'none',
-                border: `2px solid ${borderColor}`,
-                color: selectedModel === 'gemini-2.5-pro' ? bgColor : textColor,
-                fontFamily: 'Courier New, monospace',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                letterSpacing: '0.1em',
-                fontSize: '0.875rem'
-              }}
-            >
-              2.5 PRO
-            </button>
-
-            <button
-              onClick={() => setSelectedModel('gemini-3-pro-preview')}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: selectedModel === 'gemini-3-pro-preview' ? textColor : 'none',
-                border: `2px solid ${borderColor}`,
-                color: selectedModel === 'gemini-3-pro-preview' ? bgColor : textColor,
-                fontFamily: 'Courier New, monospace',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                letterSpacing: '0.1em',
-                fontSize: '0.875rem'
-              }}
-            >
-              3.0 PRO 🆕
-            </button>
-          </div>
-
-          <div style={{
-            fontSize: '0.75rem',
-            opacity: 0.6,
-            marginTop: '0.75rem',
-            textAlign: 'center',
-            color: textColor
-          }}>
-            {selectedModel === 'gemini-2.5-flash' && '⚡ Fast processing, good for most CVs'}
-            {selectedModel === 'gemini-2.5-pro' && '🎯 More reliable extraction, slower'}
-            {selectedModel === 'gemini-3-pro-preview' && '🚀 Latest model, best accuracy (Nov 2025)'}
-          </div>
-        </div>
-      )}
 
       <ProgressIndicator
         status={processingStatus}
@@ -579,7 +362,7 @@ function App() {
         </div>
       )}
 
-      {/* Generate Slides Button - MOVED ABOVE candidates list for easier access */}
+      {/* Generate Slides Button */}
       {extractedCandidates.length > 0 && !generatedSlidesUrl && (
         <div style={{
           padding: '1.5rem',
@@ -620,7 +403,6 @@ function App() {
         </div>
       )}
 
-      {/* Generated Slides URL */}
       {generatedSlidesUrl && (
         <div style={{
           padding: '1.5rem',
@@ -698,92 +480,27 @@ function App() {
               }}>
                 {index + 1}. {candidate.name}
               </div>
-
-              {/* Work History */}
-              <div style={{
-                marginBottom: '0.75rem'
-              }}>
-                <div style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 'bold',
-                  marginBottom: '0.25rem',
-                  color: textColor,
-                  opacity: 0.8
-                }}>
-                  WORK HISTORY:
-                </div>
-                {candidate.workHistory.length > 0 ? (
-                  candidate.workHistory.map((work, wIdx) => (
-                    <div
-                      key={wIdx}
-                      style={{
-                        fontSize: '0.75rem',
-                        marginLeft: '1rem',
-                        marginBottom: '0.25rem',
-                        color: textColor,
-                        opacity: 0.7
-                      }}
-                    >
-                      • {work.jobTitle} at {work.company}
-                      {work.dates && ` (${work.dates})`}
-                    </div>
-                  ))
-                ) : (
-                  <div style={{
-                    fontSize: '0.75rem',
-                    marginLeft: '1rem',
-                    color: textColor,
-                    opacity: 0.5
-                  }}>
-                    No work history found
+              <div style={{ marginBottom: '0.75rem' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '0.25rem', color: textColor, opacity: 0.8 }}>WORK HISTORY:</div>
+                {candidate.workHistory.map((work, wIdx) => (
+                  <div key={wIdx} style={{ fontSize: '0.75rem', marginLeft: '1rem', marginBottom: '0.25rem', color: textColor, opacity: 0.7 }}>
+                    • {work.jobTitle} at {work.company} {work.dates && `(${work.dates})`}
                   </div>
-                )}
+                ))}
               </div>
-
-              {/* Education */}
               <div>
-                <div style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 'bold',
-                  marginBottom: '0.25rem',
-                  color: textColor,
-                  opacity: 0.8
-                }}>
-                  EDUCATION:
-                </div>
-                {candidate.education.length > 0 ? (
-                  candidate.education.map((edu, eIdx) => (
-                    <div
-                      key={eIdx}
-                      style={{
-                        fontSize: '0.75rem',
-                        marginLeft: '1rem',
-                        marginBottom: '0.25rem',
-                        color: textColor,
-                        opacity: 0.7
-                      }}
-                    >
-                      • {edu.degree} from {edu.institution}
-                      {edu.dates && ` (${edu.dates})`}
-                    </div>
-                  ))
-                ) : (
-                  <div style={{
-                    fontSize: '0.75rem',
-                    marginLeft: '1rem',
-                    color: textColor,
-                    opacity: 0.5
-                  }}>
-                    No education found
+                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '0.25rem', color: textColor, opacity: 0.8 }}>EDUCATION:</div>
+                {candidate.education.map((edu, eIdx) => (
+                  <div key={eIdx} style={{ fontSize: '0.75rem', marginLeft: '1rem', marginBottom: '0.25rem', color: textColor, opacity: 0.7 }}>
+                    • {edu.degree} from {edu.institution} {edu.dates && `(${edu.dates})`}
                   </div>
-                )}
+                ))}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Manual Copy Output */}
       {extractedCandidates.length > 0 && (
         <ManualCopyOutput
           candidates={extractedCandidates}
@@ -799,39 +516,10 @@ function App() {
           boxShadow: `4px 4px 0px #ff6b6b`,
           marginBottom: '1.5rem'
         }}>
-          <div style={{
-            fontSize: '0.875rem',
-            fontWeight: 'bold',
-            marginBottom: '1rem',
-            letterSpacing: '0.1em',
-            color: '#ff6b6b'
-          }}>
-            [ ⚠️ FAILED EXTRACTIONS: {failedExtractions.length} ]
-          </div>
           {failedExtractions.map((error, index) => (
-            <div
-              key={index}
-              style={{
-                padding: '1rem',
-                border: `1px solid #ff6b6b`,
-                marginBottom: '0.5rem',
-                background: actualTheme === 'dark' ? '#1a1a1a' : '#fff'
-              }}
-            >
-              <div style={{
-                fontWeight: 'bold',
-                marginBottom: '0.5rem',
-                color: textColor
-              }}>
-                CV {error.candidateIndex + 1}
-                {error.candidateName && ` - ${error.candidateName}`}
-              </div>
-              <div style={{
-                fontSize: '0.75rem',
-                color: '#ff6b6b'
-              }}>
-                Error: {error.error}
-              </div>
+            <div key={index} style={{ padding: '1rem', border: `1px solid #ff6b6b`, marginBottom: '0.5rem', background: actualTheme === 'dark' ? '#1a1a1a' : '#fff' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: textColor }}>CV {error.candidateIndex + 1}</div>
+              <div style={{ fontSize: '0.75rem', color: '#ff6b6b' }}>Error: {error.error}</div>
             </div>
           ))}
         </div>
