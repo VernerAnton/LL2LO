@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { ThemeToggle } from './components/ThemeToggle';
-import { ApiKeyInput } from './components/ApiKeyInput';
+import { ProjectIdInput } from './components/ProjectIdInput';
 import { TemplateInput } from './components/TemplateInput';
 import { ParseModeSelector } from './components/ParseModeSelector';
 import { ApiTierSelector } from './components/ApiTierSelector';
@@ -21,10 +21,8 @@ function App() {
   const [themePreference, setThemePreference] = useState<Theme>(() => StorageService.getTheme());
   const [actualTheme, setActualTheme] = useState<ActualTheme>(() => StorageService.getActualTheme());
 
-  // API key state
-  const [geminiApiKey, setGeminiApiKey] = useState<string | null>(() =>
-    StorageService.getGeminiKey()
-  );
+  // Google Cloud Project ID state
+  const [userProjectId, setUserProjectId] = useState<string | null>(null);
 
   // Template presentation ID state
   const [templateId, setTemplateId] = useState<string | null>(() =>
@@ -88,13 +86,13 @@ function App() {
       });
   }, []);
 
-  // Initialize Gemini when API key is available
+  // Initialize Gemini when Project ID is available
   useEffect(() => {
-    if (geminiApiKey) {
-      GeminiService.initialize(geminiApiKey);
-      console.log('✅ Gemini AI initialized');
+    if (userProjectId) {
+      GeminiService.setUserProjectId(userProjectId);
+      console.log('✅ Gemini AI configured with user project ID');
     }
-  }, [geminiApiKey]);
+  }, [userProjectId]);
 
   // Configure API tier for rate limiting
   useEffect(() => {
@@ -151,15 +149,13 @@ function App() {
     }
   };
 
-  // API key handlers
-  const handleSaveApiKey = (key: string) => {
-    setGeminiApiKey(key);
-    StorageService.saveGeminiKey(key);
+  // Project ID handlers
+  const handleSaveProjectId = (projectId: string) => {
+    setUserProjectId(projectId);
   };
 
-  const handleRemoveApiKey = () => {
-    setGeminiApiKey(null);
-    StorageService.removeGeminiKey();
+  const handleRemoveProjectId = () => {
+    setUserProjectId(null);
   };
 
   // Template handlers
@@ -233,8 +229,8 @@ function App() {
       return;
     }
 
-    if (!geminiApiKey) {
-      alert('Please enter your Gemini API key first');
+    if (!userProjectId) {
+      alert('Please enter your Google Cloud Project ID first');
       return;
     }
 
@@ -381,7 +377,7 @@ function App() {
   const bgColor = actualTheme === 'dark' ? '#2a2a2a' : '#fefdfb';
   const textColor = actualTheme === 'dark' ? '#e0e0e0' : '#2a2a2a';
 
-  const canProcess = uploadedFiles.length > 0 && geminiApiKey && processingStatus === 'idle';
+  const canProcess = uploadedFiles.length > 0 && userProjectId && processingStatus === 'idle';
 
   return (
     <div className="container">
@@ -410,10 +406,10 @@ function App() {
         [ LongList to Presentation - Convert CV PDFs to Google Slides ]
       </div>
 
-      <ApiKeyInput
-        existingKey={geminiApiKey}
-        onSave={handleSaveApiKey}
-        onRemove={handleRemoveApiKey}
+      <ProjectIdInput
+        existingProjectId={userProjectId}
+        onSave={handleSaveProjectId}
+        onRemove={handleRemoveProjectId}
         theme={actualTheme}
       />
 
@@ -453,7 +449,7 @@ function App() {
       />
 
       {/* AI Model Selector */}
-      {uploadedFiles.length > 0 && geminiApiKey && (
+      {uploadedFiles.length > 0 && userProjectId && (
         <div style={{
           padding: '1.5rem',
           border: `2px solid ${borderColor}`,
@@ -545,7 +541,7 @@ function App() {
         theme={actualTheme}
       />
 
-      {uploadedFiles.length > 0 && geminiApiKey && (
+      {uploadedFiles.length > 0 && userProjectId && (
         <div style={{
           padding: '1.5rem',
           border: `2px solid ${borderColor}`,
