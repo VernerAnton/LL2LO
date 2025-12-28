@@ -1,7 +1,7 @@
-// Gemini AI service for CV data extraction
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// Gemini AI service for CV data extraction using REST API with User Pays billing
 import type { CandidateData, WorkExperience, Education, GeminiModel, ApiTier } from '../types';
 import { RateLimiter } from './rateLimiter';
+import { GoogleAuthService } from './googleAuthService';
 
 // Rate limiter instance (initially configured for free tier)
 const rateLimiter = new RateLimiter(6000);
@@ -13,16 +13,15 @@ export interface ExtractionResult {
 }
 
 export class GeminiService {
-  private static genAI: GoogleGenerativeAI | null = null;
-  private static apiKey: string | null = null;
+  private static userProjectId: string | null = null;
   private static retryDelays: number[] = [6000, 12000, 18000]; // Default: Free tier
 
   /**
-   * Initialize Gemini AI with API key
+   * Set user's Google Cloud Project ID for billing
    */
-  static initialize(apiKey: string): void {
-    this.apiKey = apiKey;
-    this.genAI = new GoogleGenerativeAI(apiKey);
+  static setUserProjectId(projectId: string): void {
+    this.userProjectId = projectId;
+    console.log(`🔧 User Project ID set: ${projectId}`);
   }
 
   /**
@@ -49,16 +48,24 @@ export class GeminiService {
     cvText: string,
     model: GeminiModel = 'gemini-2.5-flash'
   ): Promise<ExtractionResult> {
-    if (!this.genAI || !this.apiKey) {
+    if (!this.userProjectId) {
       return {
         success: false,
-        error: 'Gemini AI not initialized. Call initialize() first.',
+        error: 'Project ID not set. Please enter your Google Cloud Project ID.',
+      };
+    }
+
+    const token = GoogleAuthService.getAccessToken();
+    if (!token) {
+      return {
+        success: false,
+        error: 'Not authenticated. Please sign in with Google.',
       };
     }
 
     // Use rate limiter to queue the request
     return rateLimiter.enqueue(async () => {
-      return this.extractWithRetry(cvText, model);
+      return this.extractWithRetry(cvText, model, token);
     });
   }
 
@@ -68,12 +75,13 @@ export class GeminiService {
   private static async extractWithRetry(
     cvText: string,
     model: GeminiModel,
+    token: string,
     attempt: number = 1
   ): Promise<ExtractionResult> {
     const maxAttempts = 3;
 
     try {
-      const result = await this.performExtraction(cvText, model);
+      const result = await this.performExtraction(cvText, model, token);
       return result;
     } catch (error: any) {
       console.error(`❌ Extraction attempt ${attempt} failed:`, error.message);
@@ -82,7 +90,7 @@ export class GeminiService {
         const delay = this.retryDelays[attempt - 1];
         console.log(`⏳ Retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxAttempts})`);
         await this.sleep(delay);
-        return this.extractWithRetry(cvText, model, attempt + 1);
+        return this.extractWithRetry(cvText, model, token, attempt + 1);
       }
 
       return {
@@ -93,52 +101,13 @@ export class GeminiService {
   }
 
   /**
-   * Perform the actual extraction using Gemini API
+   * Perform the actual extraction using Gemini REST API
    */
   private static async performExtraction(
     cvText: string,
-    modelName: GeminiModel
+    modelName: GeminiModel,
+    token: string
   ): Promise<ExtractionResult> {
-    const model = this.genAI!.getGenerativeModel({
-      model: modelName,
-      generationConfig: <any>{
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: 'object',
-          properties: {
-            name: { type: 'string', description: 'Full name of the candidate' },
-            workHistory: {
-              type: 'array',
-              description: 'Last 5 work experiences (excluding board member roles)',
-              items: {
-                type: 'object',
-                properties: {
-                  company: { type: 'string' },
-                  jobTitle: { type: 'string' },
-                  dates: { type: 'string', description: 'Format: MM/YYYY - MM/YYYY or MM/YYYY - Present' },
-                },
-                required: ['company', 'jobTitle'],
-              },
-            },
-            education: {
-              type: 'array',
-              description: 'All education entries',
-              items: {
-                type: 'object',
-                properties: {
-                  institution: { type: 'string' },
-                  degree: { type: 'string' },
-                  dates: { type: 'string', description: 'Format: YYYY - YYYY' },
-                },
-                required: ['institution', 'degree'],
-              },
-            },
-          },
-          required: ['name', 'workHistory', 'education'],
-        },
-      },
-    });
-
     const prompt = `
 Extract structured information from this CV. IMPORTANT instructions:
 
@@ -151,18 +120,94 @@ Extract structured information from this CV. IMPORTANT instructions:
 3. Extract ALL EDUCATION entries
    - Format dates as: YYYY - YYYY (e.g., "2016 - 2018")
 
+Return the data as JSON with this exact structure:
+{
+  "name": "Full Name",
+  "workHistory": [
+    {
+      "company": "Company Name",
+      "jobTitle": "Job Title",
+      "dates": "MM/YYYY - MM/YYYY"
+    }
+  ],
+  "education": [
+    {
+      "institution": "Institution Name",
+      "degree": "Degree Name",
+      "dates": "YYYY - YYYY"
+    }
+  ]
+}
+
 CV Text:
 ${cvText}
 `;
 
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
+    // Map model names to API endpoints
+    const modelEndpointMap: Record<GeminiModel, string> = {
+      'gemini-2.5-flash': 'gemini-1.5-flash',
+      'gemini-2.5-pro': 'gemini-1.5-pro',
+      'gemini-3-pro-preview': 'gemini-1.5-pro', // Fallback to 1.5-pro for now
+    };
+
+    const apiModel = modelEndpointMap[modelName] || 'gemini-1.5-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent`;
+
+    console.log(`🤖 Calling Gemini API: ${apiModel}`);
+    console.log(`💰 Billing to project: ${this.userProjectId}`);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-Goog-User-Project': this.userProjectId!,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 2048,
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ API Error Response:', errorText);
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // Parse response from Gemini API
+    if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
+      throw new Error('Invalid response structure from Gemini API');
+    }
+
+    const responseText = data.candidates[0].content.parts[0].text;
+
+    // Extract JSON from response (may be wrapped in markdown code blocks)
+    let jsonText = responseText.trim();
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
 
     let extractedData: any;
     try {
-      extractedData = JSON.parse(text);
+      extractedData = JSON.parse(jsonText);
     } catch (e) {
+      console.error('❌ Failed to parse JSON:', jsonText);
       throw new Error('Failed to parse JSON response from Gemini');
     }
 
