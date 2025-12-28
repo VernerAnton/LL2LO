@@ -8,6 +8,10 @@
  */
 
 import type { CandidateData } from '../types';
+import { RateLimiter } from './rateLimiter';
+
+// Rate limiter for Google Slides API (1000ms = 60 requests/minute)
+const slidesRateLimiter = new RateLimiter(1000);
 
 export interface SlidesGenerationResult {
   success: boolean;
@@ -33,6 +37,15 @@ export class SlidesService {
       { y: 5.9, h: 1.5 },   // Row 4
     ],
   };
+
+  /**
+   * Execute a Google API request with rate limiting
+   */
+  private static async executeGapiRequest(params: any): Promise<any> {
+    return slidesRateLimiter.enqueue(async () => {
+      return window.gapi.client.request(params);
+    });
+  }
 
   /**
    * Convert inches to EMU
@@ -64,98 +77,36 @@ export class SlidesService {
   }
 
   /**
-   * PHASE 1: Copy template presentation using Drive API
-   */
-  private static async copyPresentation(
-    templateId: string,
-    title: string
-  ): Promise<string> {
-    console.log('📋 Phase 1: Copying template presentation...');
-
-    const response = await window.gapi.client.request({
-      path: `https://www.googleapis.com/drive/v3/files/${templateId}/copy`,
-      method: 'POST',
-      body: { name: title }
-    });
-
-    if (!response || !response.result || !response.result.id) {
-      throw new Error('Failed to copy template presentation');
-    }
-
-    const newPresentationId = response.result.id;
-    console.log(`✅ Template copied. New presentation ID: ${newPresentationId}`);
-
-    return newPresentationId;
-  }
-
-  /**
-   * PHASE 2: Get Slide 2's objectId
-   */
-  private static async getSlideObjectId(
-    presentationId: string,
-    slideIndex: number = 1
-  ): Promise<string> {
-    console.log(`📄 Phase 2: Getting objectId for slide at index ${slideIndex}...`);
-
-    const response = await window.gapi.client.request({
-      path: `${this.SLIDES_API_BASE}/presentations/${presentationId}?fields=slides.objectId`,
-      method: 'GET'
-    });
-
-    const slides = response.result.slides;
-    if (!slides || slides.length <= slideIndex) {
-      throw new Error(`Template must have at least ${slideIndex + 1} slides`);
-    }
-
-    const slideObjectId = slides[slideIndex].objectId;
-    console.log(`✅ Slide ${slideIndex + 1} objectId: ${slideObjectId}`);
-
-    return slideObjectId;
-  }
-
-  /**
    * Create a presentation with candidates in 2-column, 4-row layout
    */
   static async createPresentation(
     candidates: CandidateData[],
-    title: string = 'CV Candidates',
-    templateId?: string
+    title: string = 'CV Candidates'
   ): Promise<SlidesGenerationResult> {
     try {
       if (!window.gapi || !window.gapi.client) {
         throw new Error('Google API client not initialized');
       }
 
-      console.log('📊 Creating presentation...');
+      console.log('📊 Creating blank presentation...');
       console.log('   Token set:', window.gapi.client.getToken() !== null);
-      console.log('   Template ID:', templateId || 'None (creating blank)');
 
-      let presentationId: string;
+      // Create blank presentation
+      const createResponse = await this.executeGapiRequest({
+        path: `${this.SLIDES_API_BASE}/presentations`,
+        method: 'POST',
+        body: { title }
+      });
 
-      if (templateId) {
-        // PHASE 1: Copy the template (Drive API)
-        presentationId = await this.copyPresentation(templateId, title);
-
-        // PHASE 2-4: Duplicate slides and add text boxes
-        await this.duplicateAndPopulateSlides(presentationId, candidates);
-      } else {
-        // Fallback: Create blank presentation
-        const createResponse = await window.gapi.client.request({
-          path: `${this.SLIDES_API_BASE}/presentations`,
-          method: 'POST',
-          body: { title }
-        });
-
-        if (!createResponse || !createResponse.result) {
-          throw new Error('No response from Slides API');
-        }
-
-        presentationId = createResponse.result.presentationId;
-        console.log(`✅ Created blank presentation: ${presentationId}`);
-
-        // Add candidate slides (4 candidates per slide)
-        await this.addCandidateSlides(presentationId, candidates);
+      if (!createResponse || !createResponse.result) {
+        throw new Error('No response from Slides API');
       }
+
+      const presentationId = createResponse.result.presentationId;
+      console.log(`✅ Created blank presentation: ${presentationId}`);
+
+      // Add candidate slides (4 candidates per slide)
+      await this.addCandidateSlides(presentationId, candidates);
 
       // Generate presentation URL
       const presentationUrl = `https://docs.google.com/presentation/d/${presentationId}/edit`;
@@ -177,95 +128,6 @@ export class SlidesService {
         success: false,
         error: error.result?.error?.message || error.message || 'Unknown error'
       };
-    }
-  }
-
-  /**
-   * PHASE 2-4: Duplicate slides and populate with candidate data
-   * Uses original Slide 2 for first batch, duplicates for remaining batches
-   */
-  private static async duplicateAndPopulateSlides(
-    presentationId: string,
-    candidates: CandidateData[]
-  ): Promise<void> {
-    const timestamp = Date.now();
-
-    // PHASE 2: Calculate slides needed
-    const candidatesPerSlide = 4;
-    const totalSlidesNeeded = Math.ceil(candidates.length / candidatesPerSlide);
-    const duplicationsNeeded = Math.max(0, totalSlidesNeeded - 1);
-
-    console.log(`📊 Phase 2: Need ${totalSlidesNeeded} slides for ${candidates.length} candidates`);
-    console.log(`   Using original Slide 2 + ${duplicationsNeeded} duplications`);
-
-    // Get Slide 2's objectId
-    const slide2ObjectId = await this.getSlideObjectId(presentationId, 1);
-
-    // PHASE 3: Build all requests
-    console.log('📝 Phase 3: Building batch requests...');
-    const allRequests: any[] = [];
-
-    // Build list of target slide IDs
-    const duplicatedSlideIds: string[] = [];
-    for (let i = 0; i < duplicationsNeeded; i++) {
-      duplicatedSlideIds.push(`candidate_slide_${i}_${timestamp}`);
-    }
-
-    const targetSlideIds = [slide2ObjectId, ...duplicatedSlideIds];
-
-    // Add duplication requests (for slides 2, 3, 4, ...)
-    duplicatedSlideIds.forEach((newSlideId, index) => {
-      console.log(`   Duplication ${index + 1}: ${slide2ObjectId} → ${newSlideId} at position ${2 + index}`);
-      allRequests.push({
-        duplicateObject: {
-          objectId: slide2ObjectId,
-          objectIds: {
-            [slide2ObjectId]: newSlideId
-          },
-          insertionIndex: 2 + index  // Insert after title slide (0) and original Slide 2 (1)
-        }
-      });
-    });
-
-    // Add text box creation requests for ALL slides
-    for (let slideIdx = 0; slideIdx < totalSlidesNeeded; slideIdx++) {
-      const startIdx = slideIdx * candidatesPerSlide;
-      const candidateBatch = candidates.slice(startIdx, startIdx + candidatesPerSlide);
-      const targetSlideId = targetSlideIds[slideIdx];
-
-      console.log(`   Slide ${slideIdx + 1} (${targetSlideId}): ${candidateBatch.length} candidates`);
-
-      candidateBatch.forEach((candidate, rowIdx) => {
-        const row = this.LAYOUT.rows[rowIdx];
-
-        // Education box (left column)
-        const eduBoxId = `edu_s${slideIdx}_c${rowIdx}_${timestamp}`;
-        allRequests.push(...this.createEducationBox(targetSlideId, eduBoxId, candidate, row));
-
-        // Experience box (right column)
-        const expBoxId = `exp_s${slideIdx}_c${rowIdx}_${timestamp}`;
-        allRequests.push(...this.createExperienceBox(targetSlideId, expBoxId, candidate, row));
-      });
-    }
-
-    // PHASE 4: Execute single atomic batch
-    console.log(`🚀 Phase 4: Executing ${allRequests.length} requests in ONE atomic batch...`);
-
-    try {
-      await window.gapi.client.request({
-        path: `${this.SLIDES_API_BASE}/presentations/${presentationId}:batchUpdate`,
-        method: 'POST',
-        body: { requests: allRequests }
-      });
-
-      console.log(`✅ All slides created successfully!`);
-      console.log(`   ${totalSlidesNeeded} slides with ${candidates.length} total candidates`);
-    } catch (error: any) {
-      console.error('❌ Batch update failed:', error);
-      console.error('   Full error:', JSON.stringify(error, null, 2));
-      console.error('   Error body:', error.body);
-      console.error('   Total requests:', allRequests.length);
-      throw error;
     }
   }
 
@@ -335,11 +197,11 @@ export class SlidesService {
       ));
     });
 
-    // Execute batch update
+    // Execute batch update with rate limiting
     console.log(`  📝 Sending ${requests.length} requests for slide ${slideIndex + 1}...`);
 
     try {
-      await window.gapi.client.request({
+      await this.executeGapiRequest({
         path: `${this.SLIDES_API_BASE}/presentations/${presentationId}:batchUpdate`,
         method: 'POST',
         body: { requests }
