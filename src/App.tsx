@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import { ThemeToggle } from './components/ThemeToggle';
 import { ProjectIdInput } from './components/ProjectIdInput';
-import { TemplateInput } from './components/TemplateInput';
+// Removed unused imports
+// import { TemplateInput } from './components/TemplateInput'; 
 import { ParseModeSelector } from './components/ParseModeSelector';
 import { ApiTierSelector } from './components/ApiTierSelector';
 import { FileUploader } from './components/FileUploader';
@@ -21,7 +22,9 @@ function App() {
   const [actualTheme, setActualTheme] = useState<ActualTheme>(() => StorageService.getActualTheme());
 
   const [userProjectId, setUserProjectId] = useState<string | null>(null);
-  const templateId = null; // Unused but kept for variable reference if needed elsewhere
+  
+  // Removed unused templateId variable
+  // const templateId = null; 
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>('idle');
@@ -30,7 +33,10 @@ function App() {
   const [failedExtractions, setFailedExtractions] = useState<ProcessingError[]>([]);
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
-  const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.5-flash');
+  
+  // Removed unused setSelectedModel since selectedModel is never updated in UI
+  const [selectedModel] = useState<GeminiModel>('gemini-2.5-flash'); 
+  
   const [parseMode, setParseMode] = useState<ParseMode>(() => StorageService.getParseMode());
   const [apiTier, setApiTier] = useState<ApiTier>(() => StorageService.getApiTier());
   
@@ -95,9 +101,9 @@ function App() {
   const handleSaveProjectId = (id: string) => setUserProjectId(id);
   const handleRemoveProjectId = () => setUserProjectId(null);
 
-  // Template handlers kept as placeholders if needed, but unused for generation
-  const handleSaveTemplate = (id: string) => { console.log('Template saved:', id); }; 
-  const handleRemoveTemplate = () => { console.log('Template removed'); };
+  // Removed unused Template handlers
+  // const handleSaveTemplate = (id: string) => { console.log('Template saved:', id); }; 
+  // const handleRemoveTemplate = () => { console.log('Template removed'); };
 
   const handleParseModeChange = (mode: ParseMode) => {
     setParseMode(mode);
@@ -295,7 +301,7 @@ function App() {
         theme={actualTheme}
       />
 
-      {/* TemplateInput component removed visually to ensure compliance, though import remains for now */}
+      {/* TemplateInput component removed visually to ensure compliance */}
       
       <ApiTierSelector
         tier={apiTier}
@@ -317,6 +323,8 @@ function App() {
         parseMode={parseMode}
       />
 
+      {/* AI Model Selector Removed since it's hardcoded to Flash now to simplify UI */}
+      
       <ProgressIndicator
         status={processingStatus}
         current={progressCurrent}
