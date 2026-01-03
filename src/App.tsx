@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { ThemeToggle } from './components/ThemeToggle';
+import { LlmKeyInput } from './components/LlmKeyInput';
 import { ParseModeSelector } from './components/ParseModeSelector';
 import { FileUploader } from './components/FileUploader';
 import { ProgressIndicator } from './components/ProgressIndicator';
 import { ManualCopyOutput } from './components/ManualCopyOutput';
 import { StorageService } from './services/storageService';
 import { PDFService } from './services/pdfService';
-import { GeminiService } from './services/aiService';
-import type { Theme, ActualTheme, ProcessingStatus, CandidateData, ProcessingError, GeminiModel, ParseMode } from './types';
+import { AIService } from './services/aiService';
+import type { Theme, ActualTheme, ProcessingStatus, CandidateData, ProcessingError, ParseMode, AiProvider } from './types';
 
 function App() {
   const [themePreference, setThemePreference] = useState<Theme>(() => StorageService.getTheme());
   const [actualTheme, setActualTheme] = useState<ActualTheme>(() => StorageService.getActualTheme());
+
+  const [apiKey, setApiKey] = useState<string | null>(() => StorageService.getApiKey());
+  const [aiProvider, setAiProvider] = useState<AiProvider>(() => StorageService.getAiProvider());
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>('idle');
@@ -22,14 +26,18 @@ function App() {
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
 
-  const [selectedModel] = useState<GeminiModel>('gemini-2.5-flash');
-
   const [parseMode, setParseMode] = useState<ParseMode>(() => StorageService.getParseMode());
 
-  const [generatedSlidesUrl, setGeneratedSlidesUrl] = useState<string | null>(null);
-  const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
   const [justReset, setJustReset] = useState(false);
   const [fileUploaderKey, setFileUploaderKey] = useState(0);
+
+  // Initialize AIService with saved values
+  useEffect(() => {
+    if (apiKey) {
+      AIService.setApiKey(apiKey);
+    }
+    AIService.setProvider(aiProvider);
+  }, [apiKey, aiProvider]);
 
   useEffect(() => {
     document.body.className = `${actualTheme}-mode`;
@@ -59,12 +67,29 @@ function App() {
     StorageService.saveParseMode(mode);
   };
 
+  const handleSaveApiKey = (key: string) => {
+    setApiKey(key);
+    StorageService.saveApiKey(key);
+    AIService.setApiKey(key);
+  };
+
+  const handleRemoveApiKey = () => {
+    setApiKey(null);
+    StorageService.removeApiKey();
+    AIService.setApiKey(null);
+  };
+
+  const handleProviderChange = (provider: AiProvider) => {
+    setAiProvider(provider);
+    StorageService.saveAiProvider(provider);
+    AIService.setProvider(provider);
+  };
+
   const handleFileSelect = async (files: File[]) => {
     setUploadedFiles(files);
     setParsedCVs([]);
     setExtractedCandidates([]);
     setFailedExtractions([]);
-    setGeneratedSlidesUrl(null);
     setProcessingStatus('idle');
   };
 
@@ -76,9 +101,7 @@ function App() {
     setProcessingStatus('idle');
     setProgressCurrent(0);
     setProgressTotal(0);
-    setGeneratedSlidesUrl(null);
-    setIsGeneratingSlides(false);
-    setFileUploaderKey(prev => prev + 1);
+    setFileUploaderKey((prev: number) => prev + 1);
     setJustReset(true);
     setTimeout(() => setJustReset(false), 1500);
   };
@@ -89,7 +112,10 @@ function App() {
       return;
     }
 
-    // TODO: Add API key validation here when we implement the new AI service
+    if (!apiKey) {
+      alert('Please enter your API key first');
+      return;
+    }
 
     try {
       setProcessingStatus('parsing');
@@ -123,7 +149,7 @@ function App() {
       for (let i = 0; i < allCVs.length; i++) {
         const cv = allCVs[i];
         setProgressCurrent(i + 1);
-        const result = await GeminiService.extractCVData(cv.text, selectedModel);
+        const result = await AIService.extractCVData(cv.text);
 
         if (result.success && result.data) {
           candidates.push(result.data);
@@ -179,7 +205,7 @@ function App() {
   const bgColor = actualTheme === 'dark' ? '#2a2a2a' : '#fefdfb';
   const textColor = actualTheme === 'dark' ? '#e0e0e0' : '#2a2a2a';
 
-  const canProcess = uploadedFiles.length > 0 && processingStatus === 'idle';
+  const canProcess = uploadedFiles.length > 0 && apiKey && processingStatus === 'idle';
 
   return (
     <div className="container">
@@ -208,7 +234,14 @@ function App() {
         [ LongList to LibreOffice - Convert CV PDFs to Presentations ]
       </div>
 
-      {/* TODO: Add LlmKeyInput component here for API key management */}
+      <LlmKeyInput
+        existingKey={apiKey}
+        provider={aiProvider}
+        onSave={handleSaveApiKey}
+        onRemove={handleRemoveApiKey}
+        onProviderChange={handleProviderChange}
+        theme={actualTheme}
+      />
 
       <ParseModeSelector
         mode={parseMode}
