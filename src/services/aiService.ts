@@ -1,10 +1,9 @@
-// Gemini AI service for CV data extraction using REST API with User Pays billing
-import type { CandidateData, WorkExperience, Education, GeminiModel, ApiTier } from '../types';
+// AI service for CV data extraction - Provider Agnostic (OpenAI/Anthropic)
+import type { CandidateData, WorkExperience, Education, AiProvider } from '../types';
 import { RateLimiter } from './rateLimiter';
-import { GoogleAuthService } from './googleAuthService';
 
-// Rate limiter instance (initially configured for free tier)
-const rateLimiter = new RateLimiter(6000);
+// Rate limiter instance (1 request per second to be safe)
+const rateLimiter = new RateLimiter(1000);
 
 export interface ExtractionResult {
   success: boolean;
@@ -12,76 +11,55 @@ export interface ExtractionResult {
   error?: string;
 }
 
-export class GeminiService {
-  private static userProjectId: string | null = null;
-  private static retryDelays: number[] = [6000, 12000, 18000]; // Default: Free tier
+export class AIService {
+  private static apiKey: string | null = null;
+  private static provider: AiProvider = 'anthropic';
+  private static retryDelays: number[] = [2000, 4000, 8000]; // 2s, 4s, 8s
 
   /**
-   * Set user's Google Cloud Project ID for billing
+   * Set API key for the AI provider
    */
-  static setUserProjectId(projectId: string): void {
-    this.userProjectId = projectId;
-    console.log(`🔧 User Project ID set: ${projectId}`);
+  static setApiKey(key: string | null): void {
+    this.apiKey = key;
+    console.log(`🔧 API Key ${key ? 'set' : 'cleared'}`);
   }
 
   /**
-   * Configure rate limiting based on API tier
+   * Set AI provider (OpenAI or Anthropic)
    */
-  static setApiTier(tier: ApiTier): void {
-    if (tier === 'free') {
-      // Free tier: 10 RPM
-      rateLimiter.setDelay(6000); // 6s between requests
-      this.retryDelays = [6000, 12000, 18000]; // 6s, 12s, 18s
-      console.log('🔧 API Tier: FREE (10 RPM, slower retries)');
-    } else {
-      // Paid tier: 600 RPM (safe buffer under 1000 RPM limit)
-      rateLimiter.setDelay(100); // 100ms between requests
-      this.retryDelays = [1000, 2000, 4000]; // 1s, 2s, 4s
-      console.log('🔧 API Tier: PAID (600 RPM, fast retries)');
-    }
+  static setProvider(provider: AiProvider): void {
+    this.provider = provider;
+    console.log(`🔧 AI Provider set to: ${provider}`);
   }
 
   /**
    * Extract structured data from a single CV text
    */
-  static async extractCVData(
-    cvText: string,
-    model: GeminiModel = 'gemini-2.5-flash'
-  ): Promise<ExtractionResult> {
-    if (!this.userProjectId) {
+  static async extractCVData(cvText: string): Promise<ExtractionResult> {
+    if (!this.apiKey) {
       return {
         success: false,
-        error: 'Project ID not set. Please enter your Google Cloud Project ID.',
-      };
-    }
-
-    const token = GoogleAuthService.getAccessToken();
-    if (!token) {
-      return {
-        success: false,
-        error: 'Not authenticated. Please sign in with Google.',
+        error: 'API key not set. Please enter your API key.',
       };
     }
 
     // Use rate limiter to queue the request
     return rateLimiter.enqueue(async () => {
-      return this.extractWithRetry(cvText, model, token);
+      return this.extractWithRetry(cvText);
     });
   }
 
   /**
-   * Extract with retry logic (3 attempts with tier-appropriate delays)
+   * Extract with retry logic (3 attempts with exponential backoff)
    */
   private static async extractWithRetry(
     cvText: string,
-    model: GeminiModel,
-    token: string,
     attempt: number = 1
   ): Promise<ExtractionResult> {
     const maxAttempts = 3;
 
     try {
-      const result = await this.performExtraction(cvText, model, token);
+      const result = await this.performExtraction(cvText);
       return result;
     } catch (error: any) {
       console.error(`❌ Extraction attempt ${attempt} failed:`, error.message);
@@ -90,7 +68,7 @@ export class GeminiService {
         const delay = this.retryDelays[attempt - 1];
         console.log(`⏳ Retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxAttempts})`);
         await this.sleep(delay);
-        return this.extractWithRetry(cvText, model, token, attempt + 1);
+        return this.extractWithRetry(cvText, attempt + 1);
       }
 
       return {
@@ -101,15 +79,44 @@ export class GeminiService {
   }
 
   /**
-   * Perform the actual extraction using Gemini REST API
+   * Perform the actual extraction using the selected AI provider
    */
-  private static async performExtraction(
-    cvText: string,
-    modelName: GeminiModel,
-    token: string
-  ): Promise<ExtractionResult> {
-    const prompt = `
-Extract structured information from this CV. IMPORTANT instructions:
+  private static async performExtraction(cvText: string): Promise<ExtractionResult> {
+    const prompt = this.buildExtractionPrompt(cvText);
+
+    let responseText: string;
+
+    if (this.provider === 'openai') {
+      responseText = await this.callOpenAI(prompt);
+    } else {
+      responseText = await this.callAnthropic(prompt);
+    }
+
+    // Parse the JSON response
+    const extractedData = this.parseResponse(responseText);
+
+    // Validate and clean the data
+    const candidateData: CandidateData = {
+      name: extractedData.name || 'Unknown',
+      workHistory: this.cleanWorkHistory(extractedData.workHistory || []),
+      education: this.cleanEducation(extractedData.education || []),
+      rawText: cvText,
+    };
+
+    // Filter out board member roles
+    candidateData.workHistory = this.filterBoardMemberRoles(candidateData.workHistory);
+
+    return {
+      success: true,
+      data: candidateData,
+    };
+  }
+
+  /**
+   * Build the extraction prompt
+   */
+  private static buildExtractionPrompt(cvText: string): string {
+    return `Extract structured information from this CV. IMPORTANT instructions:
 
 1. Extract the candidate's FULL NAME
 2. Extract the LAST 5 WORK EXPERIENCES (most recent first)
@@ -140,92 +147,118 @@ Return the data as JSON with this exact structure:
 }
 
 CV Text:
-${cvText}
-`;
+${cvText}`;
+  }
 
-    // Map model names to API endpoints
-    const modelEndpointMap: Record<GeminiModel, string> = {
-      'gemini-2.5-flash': 'gemini-1.5-flash',
-      'gemini-2.5-pro': 'gemini-1.5-pro',
-      'gemini-3-pro-preview': 'gemini-1.5-pro', // Fallback to 1.5-pro for now
-    };
+  /**
+   * Call OpenAI API
+   */
+  private static async callOpenAI(prompt: string): Promise<string> {
+    const url = 'https://api.openai.com/v1/chat/completions';
 
-    const apiModel = modelEndpointMap[modelName] || 'gemini-1.5-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent`;
-
-    console.log(`🤖 Calling Gemini API: ${apiModel}`);
-    console.log(`💰 Billing to project: ${this.userProjectId}`);
+    console.log('🤖 Calling OpenAI API...');
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'X-Goog-User-Project': this.userProjectId!,
+        'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [
+        model: 'gpt-4-turbo',
+        messages: [
           {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
+            role: 'system',
+            content: 'You are a helpful assistant that extracts structured data from CVs. Always respond with valid JSON only, no additional text.'
+          },
+          {
+            role: 'user',
+            content: prompt
           }
         ],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 2048,
-        }
+        response_format: { type: 'json_object' },
+        temperature: 0.1,
+        max_tokens: 2048,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ API Error Response:', errorText);
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      console.error('❌ OpenAI API Error:', errorText);
+      throw new Error(`OpenAI API request failed: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
 
-    // Parse response from Gemini API
-    if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
-      throw new Error('Invalid response structure from Gemini API');
+    if (!data.choices || !data.choices[0]?.message?.content) {
+      throw new Error('Invalid response structure from OpenAI API');
     }
 
-    const responseText = data.candidates[0].content.parts[0].text;
+    return data.choices[0].message.content;
+  }
 
-    // Extract JSON from response (may be wrapped in markdown code blocks)
+  /**
+   * Call Anthropic API
+   */
+  private static async callAnthropic(prompt: string): Promise<string> {
+    const url = 'https://api.anthropic.com/v1/messages';
+
+    console.log('🤖 Calling Anthropic API...');
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'x-api-key': this.apiKey!,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 2048,
+        temperature: 0.1,
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Anthropic API Error:', errorText);
+      throw new Error(`Anthropic API request failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.content || !data.content[0]?.text) {
+      throw new Error('Invalid response structure from Anthropic API');
+    }
+
+    return data.content[0].text;
+  }
+
+  /**
+   * Parse JSON response from AI (may be wrapped in markdown code blocks)
+   */
+  private static parseResponse(responseText: string): any {
     let jsonText = responseText.trim();
+
+    // Remove markdown code blocks if present
     if (jsonText.startsWith('```json')) {
       jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
     } else if (jsonText.startsWith('```')) {
       jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
 
-    let extractedData: any;
     try {
-      extractedData = JSON.parse(jsonText);
+      return JSON.parse(jsonText);
     } catch (e) {
       console.error('❌ Failed to parse JSON:', jsonText);
-      throw new Error('Failed to parse JSON response from Gemini');
+      throw new Error('Failed to parse JSON response from AI');
     }
-
-    // Validate and clean the data
-    const candidateData: CandidateData = {
-      name: extractedData.name || 'Unknown',
-      workHistory: this.cleanWorkHistory(extractedData.workHistory || []),
-      education: this.cleanEducation(extractedData.education || []),
-      rawText: cvText,
-    };
-
-    // Additional client-side filtering for board member roles
-    candidateData.workHistory = this.filterBoardMemberRoles(candidateData.workHistory);
-
-    return {
-      success: true,
-      data: candidateData,
-    };
   }
 
   /**
@@ -294,3 +327,6 @@ ${cvText}
     return rateLimiter.getQueueLength();
   }
 }
+
+// Keep GeminiService as an alias for backwards compatibility during migration
+export const GeminiService = AIService;

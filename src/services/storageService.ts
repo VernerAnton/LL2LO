@@ -1,57 +1,50 @@
 // localStorage/sessionStorage wrapper with type safety
 
-import type { ParseMode, ApiTier } from '../types';
+import type { ParseMode, AiProvider } from '../types';
 
 const STORAGE_KEYS = {
-  GEMINI_API_KEY: 'gemini_api_key',
-  TEMPLATE_ID: 'template_id',
+  API_KEY: 'll2lo_api_key',
+  AI_PROVIDER: 'll2lo_ai_provider',
   THEME: 'theme',
-  SELECTED_MODEL: 'selected_model',
-  PARSE_MODE: 'll2pp_parse_mode',
-  API_TIER: 'll2pp_api_tier',
+  PARSE_MODE: 'll2lo_parse_mode',
 } as const;
 
 export class StorageService {
   /**
-   * Save Gemini API key to localStorage
+   * Save API key to localStorage
    */
-  static saveGeminiKey(key: string): void {
-    localStorage.setItem(STORAGE_KEYS.GEMINI_API_KEY, key);
+  static saveApiKey(key: string): void {
+    localStorage.setItem(STORAGE_KEYS.API_KEY, key);
   }
 
   /**
-   * Get Gemini API key from localStorage
+   * Get API key from localStorage
    */
-  static getGeminiKey(): string | null {
-    return localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
+  static getApiKey(): string | null {
+    return localStorage.getItem(STORAGE_KEYS.API_KEY);
   }
 
   /**
-   * Remove Gemini API key from localStorage
+   * Remove API key from localStorage
    */
-  static removeGeminiKey(): void {
-    localStorage.removeItem(STORAGE_KEYS.GEMINI_API_KEY);
+  static removeApiKey(): void {
+    localStorage.removeItem(STORAGE_KEYS.API_KEY);
   }
 
   /**
-   * Save template presentation ID to localStorage
+   * Save AI provider preference to localStorage
    */
-  static saveTemplateId(id: string): void {
-    localStorage.setItem(STORAGE_KEYS.TEMPLATE_ID, id);
+  static saveAiProvider(provider: AiProvider): void {
+    localStorage.setItem(STORAGE_KEYS.AI_PROVIDER, provider);
   }
 
   /**
-   * Get template presentation ID from localStorage
+   * Get AI provider preference from localStorage
+   * Defaults to 'anthropic' for first-time users
    */
-  static getTemplateId(): string | null {
-    return localStorage.getItem(STORAGE_KEYS.TEMPLATE_ID);
-  }
-
-  /**
-   * Remove template ID from localStorage
-   */
-  static removeTemplateId(): void {
-    localStorage.removeItem(STORAGE_KEYS.TEMPLATE_ID);
+  static getAiProvider(): AiProvider {
+    const stored = localStorage.getItem(STORAGE_KEYS.AI_PROVIDER);
+    return (stored === 'openai' || stored === 'anthropic') ? stored : 'anthropic';
   }
 
   /**
@@ -100,20 +93,6 @@ export class StorageService {
   }
 
   /**
-   * Save selected Gemini model
-   */
-  static saveSelectedModel(model: string): void {
-    localStorage.setItem(STORAGE_KEYS.SELECTED_MODEL, model);
-  }
-
-  /**
-   * Get selected Gemini model
-   */
-  static getSelectedModel(): string {
-    return localStorage.getItem(STORAGE_KEYS.SELECTED_MODEL) || 'gemini-2.5-flash';
-  }
-
-  /**
    * Save parse mode preference
    */
   static saveParseMode(mode: ParseMode): void {
@@ -127,22 +106,6 @@ export class StorageService {
   static getParseMode(): ParseMode {
     const stored = localStorage.getItem(STORAGE_KEYS.PARSE_MODE);
     return (stored === 'individual' || stored === 'longlist') ? stored : 'longlist';
-  }
-
-  /**
-   * Save API tier preference
-   */
-  static saveApiTier(tier: ApiTier): void {
-    localStorage.setItem(STORAGE_KEYS.API_TIER, tier);
-  }
-
-  /**
-   * Get API tier preference
-   * Defaults to 'free' for first-time users
-   */
-  static getApiTier(): ApiTier {
-    const stored = localStorage.getItem(STORAGE_KEYS.API_TIER);
-    return (stored === 'free' || stored === 'paid') ? stored : 'free';
   }
 
   /**

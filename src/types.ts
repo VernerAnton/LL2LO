@@ -5,7 +5,11 @@ export type ActualTheme = 'light' | 'dark'; // What actually gets applied to UI
 
 export type ProcessingStatus = 'idle' | 'parsing' | 'extracting' | 'generating' | 'done' | 'error';
 
-export type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-3-pro-preview';
+// AI Provider types
+export type AiProvider = 'openai' | 'anthropic';
+
+export type OpenAIModel = 'gpt-4' | 'gpt-4-turbo' | 'gpt-3.5-turbo';
+export type AnthropicModel = 'claude-3-5-sonnet-20241022' | 'claude-3-opus-20240229' | 'claude-3-haiku-20240307';
 
 export type OutputMethod = 'slides' | 'manual';
 
@@ -44,8 +48,8 @@ export interface ProcessingError {
 
 export interface AppState {
   theme: Theme;
-  geminiApiKey: string | null;
-  selectedModel: GeminiModel;
+  apiKey: string | null;
+  aiProvider: AiProvider;
   outputMethod: OutputMethod;
   uploadedFile: File | null;
   processingStatus: ProcessingStatus;
