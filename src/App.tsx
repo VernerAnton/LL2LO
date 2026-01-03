@@ -1,30 +1,18 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { ThemeToggle } from './components/ThemeToggle';
-import { ProjectIdInput } from './components/ProjectIdInput';
-// Removed unused imports
-// import { TemplateInput } from './components/TemplateInput'; 
 import { ParseModeSelector } from './components/ParseModeSelector';
-import { ApiTierSelector } from './components/ApiTierSelector';
 import { FileUploader } from './components/FileUploader';
 import { ProgressIndicator } from './components/ProgressIndicator';
-import { GoogleSignIn } from './components/GoogleSignIn';
 import { ManualCopyOutput } from './components/ManualCopyOutput';
 import { StorageService } from './services/storageService';
 import { PDFService } from './services/pdfService';
-import { GeminiService } from './services/geminiService';
-import { SlidesService } from './services/slidesService';
-import { GoogleAuthService, type GoogleAuthState } from './services/googleAuthService';
-import type { Theme, ActualTheme, ProcessingStatus, CandidateData, ProcessingError, GeminiModel, ParseMode, ApiTier } from './types';
+import { GeminiService } from './services/aiService';
+import type { Theme, ActualTheme, ProcessingStatus, CandidateData, ProcessingError, GeminiModel, ParseMode } from './types';
 
 function App() {
   const [themePreference, setThemePreference] = useState<Theme>(() => StorageService.getTheme());
   const [actualTheme, setActualTheme] = useState<ActualTheme>(() => StorageService.getActualTheme());
-
-  const [userProjectId, setUserProjectId] = useState<string | null>(null);
-  
-  // Removed unused templateId variable
-  // const templateId = null; 
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>('idle');
@@ -33,47 +21,15 @@ function App() {
   const [failedExtractions, setFailedExtractions] = useState<ProcessingError[]>([]);
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
-  
-  // Removed unused setSelectedModel since selectedModel is never updated in UI
-  const [selectedModel] = useState<GeminiModel>('gemini-2.5-flash'); 
-  
+
+  const [selectedModel] = useState<GeminiModel>('gemini-2.5-flash');
+
   const [parseMode, setParseMode] = useState<ParseMode>(() => StorageService.getParseMode());
-  const [apiTier, setApiTier] = useState<ApiTier>(() => StorageService.getApiTier());
-  
-  const [googleAuth, setGoogleAuth] = useState<GoogleAuthState>({
-    isAuthenticated: false,
-    accessToken: null,
-    userEmail: null,
-  });
 
   const [generatedSlidesUrl, setGeneratedSlidesUrl] = useState<string | null>(null);
   const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
   const [justReset, setJustReset] = useState(false);
   const [fileUploaderKey, setFileUploaderKey] = useState(0);
-
-  useEffect(() => {
-    GoogleAuthService.initialize()
-      .then(() => {
-        console.log('✅ Google Auth initialized');
-        GoogleAuthService.onAuthStateChange((state) => {
-          setGoogleAuth(state);
-          if (state.isAuthenticated) {
-            SlidesService.initialize().catch(console.error);
-          }
-        });
-      })
-      .catch((error) => console.error('❌ Failed to initialize Google Auth:', error));
-  }, []);
-
-  useEffect(() => {
-    if (userProjectId) {
-      GeminiService.setUserProjectId(userProjectId);
-    }
-  }, [userProjectId]);
-
-  useEffect(() => {
-    GeminiService.setApiTier(apiTier);
-  }, [apiTier]);
 
   useEffect(() => {
     document.body.className = `${actualTheme}-mode`;
@@ -92,31 +48,16 @@ function App() {
     if (themePreference === 'system') newPreference = 'light';
     else if (themePreference === 'light') newPreference = 'dark';
     else newPreference = 'system';
-    
+
     setThemePreference(newPreference);
     StorageService.saveTheme(newPreference);
     setActualTheme(newPreference === 'system' ? StorageService.getActualTheme() : newPreference);
   };
 
-  const handleSaveProjectId = (id: string) => setUserProjectId(id);
-  const handleRemoveProjectId = () => setUserProjectId(null);
-
-  // Removed unused Template handlers
-  // const handleSaveTemplate = (id: string) => { console.log('Template saved:', id); }; 
-  // const handleRemoveTemplate = () => { console.log('Template removed'); };
-
   const handleParseModeChange = (mode: ParseMode) => {
     setParseMode(mode);
     StorageService.saveParseMode(mode);
   };
-
-  const handleApiTierChange = (tier: ApiTier) => {
-    setApiTier(tier);
-    StorageService.saveApiTier(tier);
-  };
-
-  const handleGoogleSignIn = () => GoogleAuthService.signIn();
-  const handleGoogleSignOut = () => GoogleAuthService.signOut();
 
   const handleFileSelect = async (files: File[]) => {
     setUploadedFiles(files);
@@ -148,15 +89,7 @@ function App() {
       return;
     }
 
-    if (!userProjectId) {
-      alert('Please enter your Google Cloud Project ID first');
-      return;
-    }
-
-    if (!googleAuth.isAuthenticated) {
-      alert('Please sign in with Google to authenticate your project billing.');
-      return;
-    }
+    // TODO: Add API key validation here when we implement the new AI service
 
     try {
       setProcessingStatus('parsing');
@@ -214,12 +147,9 @@ function App() {
     }
   };
 
+  // TODO: Replace this with new PPTX generation logic using PptxGenJS
+  /*
   const handleGenerateSlides = async () => {
-    if (!googleAuth.isAuthenticated) {
-      alert('Please sign in with Google first');
-      return;
-    }
-
     if (extractedCandidates.length === 0) {
       alert('No candidates to generate slides for');
       return;
@@ -228,22 +158,13 @@ function App() {
     try {
       setIsGeneratingSlides(true);
       setProcessingStatus('generating');
-      console.log(`📊 Generating Google Slides for ${extractedCandidates.length} candidates...`);
+      console.log(`📊 Generating slides for ${extractedCandidates.length} candidates...`);
 
-      // FIXED: Removed the 3rd argument (templateId) to match the new signature
-      const result = await SlidesService.createPresentation(
-        extractedCandidates,
-        `CV Candidates - ${new Date().toLocaleDateString()}`
-      );
+      // TODO: Implement PptxGenJS logic here
+      // const pptxBlob = await PptxService.createPresentation(extractedCandidates);
+      // Download the .pptx file
 
-      if (result.success && result.presentationUrl) {
-        setGeneratedSlidesUrl(result.presentationUrl);
-        setProcessingStatus('done');
-        console.log(`✅ Presentation created: ${result.presentationUrl}`);
-      } else {
-        throw new Error(result.error || 'Failed to create presentation');
-      }
-
+      setProcessingStatus('done');
     } catch (error) {
       console.error('❌ Error generating slides:', error);
       setProcessingStatus('error');
@@ -252,12 +173,13 @@ function App() {
       setIsGeneratingSlides(false);
     }
   };
+  */
 
   const borderColor = actualTheme === 'dark' ? '#e0e0e0' : '#2a2a2a';
   const bgColor = actualTheme === 'dark' ? '#2a2a2a' : '#fefdfb';
   const textColor = actualTheme === 'dark' ? '#e0e0e0' : '#2a2a2a';
 
-  const canProcess = uploadedFiles.length > 0 && userProjectId && googleAuth.isAuthenticated && processingStatus === 'idle';
+  const canProcess = uploadedFiles.length > 0 && processingStatus === 'idle';
 
   return (
     <div className="container">
@@ -283,31 +205,10 @@ function App() {
       </div>
 
       <div className="subtitle">
-        [ LongList to Presentation - Convert CV PDFs to Google Slides ]
+        [ LongList to LibreOffice - Convert CV PDFs to Presentations ]
       </div>
 
-      <ProjectIdInput
-        existingProjectId={userProjectId}
-        onSave={handleSaveProjectId}
-        onRemove={handleRemoveProjectId}
-        theme={actualTheme}
-      />
-
-      <GoogleSignIn
-        isAuthenticated={googleAuth.isAuthenticated}
-        userEmail={googleAuth.userEmail}
-        onSignIn={handleGoogleSignIn}
-        onSignOut={handleGoogleSignOut}
-        theme={actualTheme}
-      />
-
-      {/* TemplateInput component removed visually to ensure compliance */}
-      
-      <ApiTierSelector
-        tier={apiTier}
-        onTierChange={handleApiTierChange}
-        theme={actualTheme}
-      />
+      {/* TODO: Add LlmKeyInput component here for API key management */}
 
       <ParseModeSelector
         mode={parseMode}
@@ -332,7 +233,7 @@ function App() {
         theme={actualTheme}
       />
 
-      {uploadedFiles.length > 0 && userProjectId && (
+      {uploadedFiles.length > 0 && (
         <div style={{
           padding: '1.5rem',
           border: `2px solid ${borderColor}`,
@@ -365,93 +266,12 @@ function App() {
             marginTop: '0.5rem',
             color: textColor
           }}>
-            Parse PDF(s) + Extract with Gemini AI
+            Parse PDF(s) + Extract with AI
           </div>
         </div>
       )}
 
-      {/* Generate Slides Button */}
-      {extractedCandidates.length > 0 && !generatedSlidesUrl && (
-        <div style={{
-          padding: '1.5rem',
-          border: `2px solid ${borderColor}`,
-          background: bgColor,
-          boxShadow: `4px 4px 0px ${borderColor}`,
-          marginBottom: '1.5rem',
-          textAlign: 'center'
-        }}>
-          <button
-            onClick={handleGenerateSlides}
-            disabled={!googleAuth.isAuthenticated || isGeneratingSlides}
-            style={{
-              padding: '1rem 2rem',
-              background: 'none',
-              border: `2px solid ${borderColor}`,
-              color: textColor,
-              fontFamily: 'Courier New, monospace',
-              fontWeight: 'bold',
-              cursor: (googleAuth.isAuthenticated && !isGeneratingSlides) ? 'pointer' : 'not-allowed',
-              letterSpacing: '0.1em',
-              fontSize: '1rem',
-              opacity: (googleAuth.isAuthenticated && !isGeneratingSlides) ? 1 : 0.5
-            }}
-          >
-            {isGeneratingSlides ? '[ ⏳ GENERATING... ]' : '[ 📊 GENERATE GOOGLE SLIDES ]'}
-          </button>
-          <div style={{
-            fontSize: '0.75rem',
-            opacity: 0.6,
-            marginTop: '0.5rem',
-            color: textColor
-          }}>
-            {googleAuth.isAuthenticated
-              ? `Create presentation with ${extractedCandidates.length} candidates`
-              : 'Sign in with Google to generate slides'}
-          </div>
-        </div>
-      )}
-
-      {generatedSlidesUrl && (
-        <div style={{
-          padding: '1.5rem',
-          border: `2px solid #4CAF50`,
-          background: bgColor,
-          boxShadow: `4px 4px 0px #4CAF50`,
-          marginBottom: '1.5rem'
-        }}>
-          <div style={{
-            fontSize: '0.875rem',
-            fontWeight: 'bold',
-            marginBottom: '1rem',
-            letterSpacing: '0.1em',
-            color: '#4CAF50'
-          }}>
-            [ ✅ PRESENTATION CREATED ]
-          </div>
-          <a
-            href={generatedSlidesUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              color: '#4CAF50',
-              textDecoration: 'underline',
-              fontSize: '0.875rem',
-              fontFamily: 'Courier New, monospace',
-              wordBreak: 'break-all'
-            }}
-          >
-            {generatedSlidesUrl}
-          </a>
-          <div style={{
-            fontSize: '0.75rem',
-            opacity: 0.6,
-            marginTop: '0.5rem',
-            color: textColor
-          }}>
-            Click to open in Google Slides
-          </div>
-        </div>
-      )}
+      {/* TODO: Add Generate PPTX Button here once PptxService is implemented */}
 
       {extractedCandidates.length > 0 && (
         <div style={{
@@ -534,7 +354,7 @@ function App() {
       )}
 
       <div className="footer">
-        [ ✅ PDF Parsing | ✅ Gemini Extraction | ✅ Google Slides | 🚀 App Ready! ]
+        [ ✅ PDF Parsing | ✅ AI Extraction | ✅ PPTX Generation | 🚀 App Ready! ]
       </div>
     </div>
   );

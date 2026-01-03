@@ -11,8 +11,6 @@ export type OutputMethod = 'slides' | 'manual';
 
 export type ParseMode = 'longlist' | 'individual';
 
-export type ApiTier = 'free' | 'paid';
-
 export interface WorkExperience {
   jobTitle: string;
   company: string;
@@ -44,12 +42,6 @@ export interface ProcessingError {
   rawText?: string;
 }
 
-export interface GoogleAuthState {
-  isAuthenticated: boolean;
-  accessToken: string | null;
-  userEmail: string | null;
-}
-
 export interface AppState {
   theme: Theme;
   geminiApiKey: string | null;
@@ -63,5 +55,4 @@ export interface AppState {
   progressCurrent: number;
   progressTotal: number;
   generatedSlidesUrl: string | null;
-  googleAuth: GoogleAuthState;
 }
