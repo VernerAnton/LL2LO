@@ -3,6 +3,7 @@ import './App.css';
 import { ThemeToggle } from './components/ThemeToggle';
 import { LlmKeyInput } from './components/LlmKeyInput';
 import { ParseModeSelector } from './components/ParseModeSelector';
+import { ConcurrencySelector } from './components/ConcurrencySelector';
 import { FileUploader } from './components/FileUploader';
 import { ProgressIndicator } from './components/ProgressIndicator';
 import { ManualCopyOutput } from './components/ManualCopyOutput';
@@ -10,7 +11,7 @@ import { GenerateButton } from './components/GenerateButton';
 import { StorageService } from './services/storageService';
 import { PDFService } from './services/pdfService';
 import { AIService } from './services/aiService';
-import type { Theme, ActualTheme, ProcessingStatus, CandidateData, ProcessingError, ParseMode, AiProvider, AnthropicModel } from './types';
+import type { Theme, ActualTheme, ProcessingStatus, CandidateData, ProcessingError, ParseMode, AiProvider, AnthropicModel, ConcurrencyLevel } from './types';
 
 function App() {
   const [themePreference, setThemePreference] = useState<Theme>(() => StorageService.getTheme());
@@ -29,6 +30,10 @@ function App() {
   const [progressTotal, setProgressTotal] = useState(0);
 
   const [parseMode, setParseMode] = useState<ParseMode>(() => StorageService.getParseMode());
+  const [concurrencyLevel, setConcurrencyLevel] = useState<ConcurrencyLevel>(() => StorageService.getConcurrencyLevel());
+
+  const [totalCost, setTotalCost] = useState(0);
+  const [totalTokens, setTotalTokens] = useState(0);
 
   const [justReset, setJustReset] = useState(false);
   const [fileUploaderKey, setFileUploaderKey] = useState(0);
@@ -94,6 +99,11 @@ function App() {
     AIService.setAnthropicModel(model);
   };
 
+  const handleConcurrencyChange = (level: ConcurrencyLevel) => {
+    setConcurrencyLevel(level);
+    StorageService.saveConcurrencyLevel(level);
+  };
+
   const handleFileSelect = async (files: File[]) => {
     setUploadedFiles(files);
     setParsedCVs([]);
@@ -110,6 +120,8 @@ function App() {
     setProcessingStatus('idle');
     setProgressCurrent(0);
     setProgressTotal(0);
+    setTotalCost(0);
+    setTotalTokens(0);
     setFileUploaderKey((prev: number) => prev + 1);
     setJustReset(true);
     setTimeout(() => setJustReset(false), 1500);
@@ -155,22 +167,48 @@ function App() {
       const candidates: CandidateData[] = [];
       const errors: ProcessingError[] = [];
 
-      for (let i = 0; i < allCVs.length; i++) {
-        const cv = allCVs[i];
-        setProgressCurrent(i + 1);
-        const result = await AIService.extractCVData(cv.text);
+      // Process CVs with controlled concurrency
+      let completedCount = 0;
+      let cumulativeCost = 0;
+      let cumulativeTokens = 0;
 
-        if (result.success && result.data) {
-          candidates.push(result.data);
-        } else {
-          errors.push({
-            candidateIndex: i,
-            error: result.error || 'Unknown error',
-            rawText: cv.text,
-          });
+      for (let i = 0; i < allCVs.length; i += concurrencyLevel) {
+        const batch = allCVs.slice(i, i + concurrencyLevel);
+        const batchPromises = batch.map(async (cv, batchIndex) => {
+          const globalIndex = i + batchIndex;
+          const result = await AIService.extractCVData(cv.text);
+
+          return {
+            index: globalIndex,
+            result,
+            cv
+          };
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+
+        for (const { index, result, cv } of batchResults) {
+          if (result.success && result.data) {
+            candidates.push(result.data);
+            // Track usage and cost
+            if (result.usage) {
+              cumulativeCost += result.usage.estimatedCost;
+              cumulativeTokens += result.usage.totalTokens;
+            }
+          } else {
+            errors.push({
+              candidateIndex: index,
+              error: result.error || 'Unknown error',
+              rawText: cv.text,
+            });
+          }
+          completedCount++;
+          setProgressCurrent(completedCount);
         }
       }
 
+      setTotalCost(cumulativeCost);
+      setTotalTokens(cumulativeTokens);
       setExtractedCandidates(candidates);
       setFailedExtractions(errors);
       setProcessingStatus('done');
@@ -232,6 +270,12 @@ function App() {
         theme={actualTheme}
       />
 
+      <ConcurrencySelector
+        level={concurrencyLevel}
+        onLevelChange={handleConcurrencyChange}
+        theme={actualTheme}
+      />
+
       <FileUploader
         key={fileUploaderKey}
         onFileSelect={handleFileSelect}
@@ -248,6 +292,59 @@ function App() {
         total={progressTotal}
         theme={actualTheme}
       />
+
+      {/* Cost Tracking Display */}
+      {processingStatus === 'done' && totalTokens > 0 && (
+        <div
+          style={{
+            padding: '1.5rem',
+            border: `2px solid ${borderColor}`,
+            background: bgColor,
+            boxShadow: `4px 4px 0px ${borderColor}`,
+            marginBottom: '1.5rem',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '0.875rem',
+              fontWeight: 'bold',
+              marginBottom: '1rem',
+              letterSpacing: '0.1em',
+              color: textColor,
+            }}
+          >
+            [ API USAGE SUMMARY ]
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{ color: textColor }}>
+              <div style={{ fontSize: '0.75rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+                TOTAL TOKENS:
+              </div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 'bold', fontFamily: 'Courier New, monospace' }}>
+                {totalTokens.toLocaleString()}
+              </div>
+            </div>
+            <div style={{ color: textColor }}>
+              <div style={{ fontSize: '0.75rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+                ESTIMATED COST:
+              </div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 'bold', fontFamily: 'Courier New, monospace' }}>
+                ${totalCost.toFixed(4)}
+              </div>
+            </div>
+          </div>
+          <div
+            style={{
+              fontSize: '0.65rem',
+              opacity: 0.5,
+              marginTop: '1rem',
+              color: textColor,
+            }}
+          >
+            💡 Cost per CV: ${(totalCost / extractedCandidates.length).toFixed(4)} • Model: {aiProvider === 'anthropic' ? anthropicModel : 'GPT-4 Turbo'}
+          </div>
+        </div>
+      )}
 
       {uploadedFiles.length > 0 && (
         <div style={{

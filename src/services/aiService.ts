@@ -1,14 +1,50 @@
 // AI service for CV data extraction - Provider Agnostic (OpenAI/Anthropic)
 import type { CandidateData, WorkExperience, Education, AiProvider, AnthropicModel } from '../types';
 import { RateLimiter } from './rateLimiter';
+import { z } from 'zod';
 
 // Rate limiter instance (1 request per second to be safe)
 const rateLimiter = new RateLimiter(1000);
+
+// Zod schema for validating AI-extracted CV data
+const WorkExperienceSchema = z.object({
+  company: z.string().min(1, 'Company name is required'),
+  jobTitle: z.string().min(1, 'Job title is required'),
+  dates: z.string().optional(),
+});
+
+const EducationSchema = z.object({
+  institution: z.string().min(1, 'Institution name is required'),
+  degree: z.string().min(1, 'Degree is required'),
+  dates: z.string().optional(),
+});
+
+const CVDataSchema = z.object({
+  name: z.string().min(1, 'Candidate name is required'),
+  workHistory: z.array(WorkExperienceSchema).max(5, 'Maximum 5 work experiences'),
+  education: z.array(EducationSchema),
+});
+
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  estimatedCost: number; // in USD
+}
 
 export interface ExtractionResult {
   success: boolean;
   data?: CandidateData;
   error?: string;
+  usage?: TokenUsage;
+}
+
+interface AIResponse {
+  text: string;
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+  };
 }
 
 export class AIService {
@@ -88,21 +124,45 @@ export class AIService {
   }
 
   /**
+   * Calculate cost based on model and token usage
+   */
+  private static calculateCost(inputTokens: number, outputTokens: number): number {
+    const pricing: Record<string, { input: number; output: number }> = {
+      // Anthropic (per 1M tokens)
+      'claude-3-5-haiku-20241022': { input: 0.25, output: 1.25 },
+      'claude-3-5-sonnet-20241022': { input: 3.00, output: 15.00 },
+      'claude-opus-4-5-20251101': { input: 15.00, output: 75.00 },
+      // OpenAI (per 1M tokens)
+      'gpt-4-turbo': { input: 10.00, output: 30.00 },
+      'gpt-4': { input: 30.00, output: 60.00 },
+      'gpt-3.5-turbo': { input: 0.50, output: 1.50 },
+    };
+
+    const model = this.provider === 'anthropic' ? this.anthropicModel : 'gpt-4-turbo';
+    const rates = pricing[model] || { input: 0, output: 0 };
+
+    const inputCost = (inputTokens / 1_000_000) * rates.input;
+    const outputCost = (outputTokens / 1_000_000) * rates.output;
+
+    return inputCost + outputCost;
+  }
+
+  /**
    * Perform the actual extraction using the selected AI provider
    */
   private static async performExtraction(cvText: string): Promise<ExtractionResult> {
     const prompt = this.buildExtractionPrompt(cvText);
 
-    let responseText: string;
+    let response: AIResponse;
 
     if (this.provider === 'openai') {
-      responseText = await this.callOpenAI(prompt);
+      response = await this.callOpenAI(prompt);
     } else {
-      responseText = await this.callAnthropic(prompt);
+      response = await this.callAnthropic(prompt);
     }
 
     // Parse the JSON response
-    const extractedData = this.parseResponse(responseText);
+    const extractedData = this.parseResponse(response.text);
 
     // Validate and clean the data
     const candidateData: CandidateData = {
@@ -115,9 +175,19 @@ export class AIService {
     // Filter out board member roles
     candidateData.workHistory = this.filterBoardMemberRoles(candidateData.workHistory);
 
+    // Calculate usage and cost
+    const totalTokens = response.usage.inputTokens + response.usage.outputTokens;
+    const estimatedCost = this.calculateCost(response.usage.inputTokens, response.usage.outputTokens);
+
     return {
       success: true,
       data: candidateData,
+      usage: {
+        inputTokens: response.usage.inputTokens,
+        outputTokens: response.usage.outputTokens,
+        totalTokens,
+        estimatedCost,
+      },
     };
   }
 
@@ -173,7 +243,7 @@ ${cvText}`;
   /**
    * Call OpenAI API
    */
-  private static async callOpenAI(prompt: string): Promise<string> {
+  private static async callOpenAI(prompt: string): Promise<AIResponse> {
     const url = 'https://api.openai.com/v1/chat/completions';
 
     console.log('🤖 Calling OpenAI API...');
@@ -214,13 +284,23 @@ ${cvText}`;
       throw new Error('Invalid response structure from OpenAI API');
     }
 
-    return data.choices[0].message.content;
+    if (!data.usage) {
+      throw new Error('No usage data in OpenAI response');
+    }
+
+    return {
+      text: data.choices[0].message.content,
+      usage: {
+        inputTokens: data.usage.prompt_tokens || 0,
+        outputTokens: data.usage.completion_tokens || 0,
+      },
+    };
   }
 
   /**
    * Call Anthropic API with selected model
    */
-  private static async callAnthropic(prompt: string): Promise<string> {
+  private static async callAnthropic(prompt: string): Promise<AIResponse> {
     const url = 'https://api.anthropic.com/v1/messages';
 
     console.log(`🤖 Calling Anthropic API (${this.anthropicModel})...`);
@@ -258,11 +338,21 @@ ${cvText}`;
       throw new Error('Invalid response structure from Anthropic API');
     }
 
-    return data.content[0].text;
+    if (!data.usage) {
+      throw new Error('No usage data in Anthropic response');
+    }
+
+    return {
+      text: data.content[0].text,
+      usage: {
+        inputTokens: data.usage.input_tokens || 0,
+        outputTokens: data.usage.output_tokens || 0,
+      },
+    };
   }
 
   /**
-   * Parse JSON response from AI (may be wrapped in markdown code blocks)
+   * Parse and validate JSON response from AI (may be wrapped in markdown code blocks)
    */
   private static parseResponse(responseText: string): any {
     let jsonText = responseText.trim();
@@ -274,12 +364,25 @@ ${cvText}`;
       jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
 
+    // Parse JSON
+    let parsed: any;
     try {
-      return JSON.parse(jsonText);
+      parsed = JSON.parse(jsonText);
     } catch (e) {
       console.error('❌ Failed to parse JSON:', jsonText);
       throw new Error('Failed to parse JSON response from AI');
     }
+
+    // Validate with Zod schema
+    const validationResult = CVDataSchema.safeParse(parsed);
+
+    if (!validationResult.success) {
+      console.error('❌ AI response validation failed:', validationResult.error.format());
+      console.error('Response data:', parsed);
+      throw new Error(`AI returned invalid data structure: ${validationResult.error.issues[0]?.message || 'Unknown validation error'}`);
+    }
+
+    return validationResult.data;
   }
 
   /**

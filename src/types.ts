@@ -18,6 +18,9 @@ export type OutputMethod = 'slides' | 'manual';
 
 export type ParseMode = 'longlist' | 'individual';
 
+// Concurrency level for parallel API requests (1-5)
+export type ConcurrencyLevel = 1 | 2 | 3 | 4 | 5;
+
 export interface WorkExperience {
   jobTitle: string;
   company: string;

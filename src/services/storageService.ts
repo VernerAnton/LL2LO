@@ -1,11 +1,12 @@
 // localStorage/sessionStorage wrapper with type safety
 
-import type { ParseMode, AiProvider, AnthropicModel } from '../types';
+import type { ParseMode, AiProvider, AnthropicModel, ConcurrencyLevel } from '../types';
 
 const STORAGE_KEYS = {
   API_KEY: 'll2lo_api_key',
   AI_PROVIDER: 'll2lo_ai_provider',
   ANTHROPIC_MODEL: 'll2lo_anthropic_model',
+  CONCURRENCY_LEVEL: 'll2lo_concurrency_level',
   THEME: 'theme',
   PARSE_MODE: 'll2lo_parse_mode',
 } as const;
@@ -130,6 +131,23 @@ export class StorageService {
   static getParseMode(): ParseMode {
     const stored = localStorage.getItem(STORAGE_KEYS.PARSE_MODE);
     return (stored === 'individual' || stored === 'longlist') ? stored : 'longlist';
+  }
+
+  /**
+   * Save concurrency level preference
+   */
+  static saveConcurrencyLevel(level: ConcurrencyLevel): void {
+    localStorage.setItem(STORAGE_KEYS.CONCURRENCY_LEVEL, level.toString());
+  }
+
+  /**
+   * Get concurrency level preference
+   * Defaults to 3 (recommended for Tier 1)
+   */
+  static getConcurrencyLevel(): ConcurrencyLevel {
+    const stored = localStorage.getItem(STORAGE_KEYS.CONCURRENCY_LEVEL);
+    const level = parseInt(stored || '3', 10);
+    return (level >= 1 && level <= 5) ? level as ConcurrencyLevel : 3;
   }
 
   /**
