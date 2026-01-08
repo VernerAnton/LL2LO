@@ -22,6 +22,17 @@ export class SlideGenerator {
    */
   static async generate(candidates: CandidateData[]): Promise<GenerationResult> {
     try {
+      // Validate input
+      if (!candidates || candidates.length === 0) {
+        return {
+          success: false,
+          count: 0,
+          error: 'No candidates to generate. Please extract CV data first.'
+        };
+      }
+
+      console.log(`📊 Starting presentation generation for ${candidates.length} candidates...`);
+
       const prs = new PptxGenJS();
 
       // 1. Set up presentation properties
@@ -30,7 +41,13 @@ export class SlideGenerator {
       prs.title = `Candidate Longlist - ${new Date().toLocaleDateString()}`;
 
       // 2. Process Candidates in Batches of 4
+      const totalSlides = Math.ceil(candidates.length / 4);
+      let slideCount = 0;
+
       for (let i = 0; i < candidates.length; i += 4) {
+        slideCount++;
+        console.log(`📄 Generating slide ${slideCount} of ${totalSlides}...`);
+
         const group = candidates.slice(i, i + 4);
 
         // Create a new slide
@@ -47,6 +64,8 @@ export class SlideGenerator {
       console.log(`💾 Saving presentation: ${filename}`);
       await prs.writeFile({ fileName: filename });
 
+      console.log(`✅ Presentation generated successfully: ${slideCount} slides, ${candidates.length} candidates`);
+
       return { success: true, count: candidates.length };
 
     } catch (error: any) {
@@ -62,6 +81,7 @@ export class SlideGenerator {
   /**
    * Maps a CandidateData object to a specific slot on the slide
    * Uses 2-column layout: Education (left) and Experience (right)
+   * Format matches LinkedIn export: Name in CAPS, Company - Job Title dates
    */
   private static addCandidateToSlide(slide: any, candidate: CandidateData, slotIndex: number) {
     if (slotIndex >= layoutConfig.slots.length) return;
@@ -70,20 +90,20 @@ export class SlideGenerator {
     const { fonts, colors } = layoutConfig;
 
     // --- DATA PREPARATION ---
-    // 1. Role: Use the most recent job title
-    const currentRole = candidate.workHistory[0]?.jobTitle || 'Candidate';
-
-    // 2. Experience: Format WorkHistory array into bulleted list
+    // 1. Experience: Format WorkHistory array into bulleted list
+    // Format: Company - Job Title dates
     // Limit to top 5 items to prevent overflow
-    const experienceText = candidate.workHistory
-      .slice(0, OVERFLOW_CONFIG.maxExperienceBullets)
-      .map(w => {
-        const dateStr = w.dates ? ` (${w.dates})` : '';
-        return `${w.jobTitle} at ${w.company}${dateStr}`;
-      })
-      .join('\n');
+    const experienceText = candidate.workHistory.length > 0
+      ? candidate.workHistory
+          .slice(0, OVERFLOW_CONFIG.maxExperienceBullets)
+          .map(w => {
+            const dateStr = w.dates ? ` ${w.dates}` : '';
+            return `${w.company} - ${w.jobTitle}${dateStr}`;
+          })
+          .join('\n')
+      : 'No operational experience found (board positions filtered)';
 
-    // 3. Education: Format Education array
+    // 2. Education: Format Education array
     // Institution on its own line, then bullet with degree below
     const educationText = candidate.education
       .map(e => {
@@ -108,48 +128,36 @@ export class SlideGenerator {
       });
     }
 
-    // --- RIGHT COLUMN: NAME + ROLE + EXPERIENCE ---
+    // --- RIGHT COLUMN: NAME + EXPERIENCE ---
 
-    // A. NAME (top of right column)
-    slide.addText(candidate.name, {
+    // A. NAME (top of right column, in CAPS and bold)
+    slide.addText(candidate.name.toUpperCase(), {
       x: slot.experience.x,
       y: slot.experience.y,
       w: slot.experience.w,
-      h: 0.3,
+      h: 0.25,
       fontSize: fonts.name,
       color: this.hexToRgb(colors.name),
       bold: true,
       fit: 'shrink',
-      valign: 'bottom'
-    });
-
-    // B. ROLE (Below Name)
-    slide.addText(currentRole, {
-      x: slot.experience.x,
-      y: slot.experience.y + 0.32,
-      w: slot.experience.w,
-      h: 0.25,
-      fontSize: fonts.role,
-      color: this.hexToRgb(colors.role),
-      fit: 'shrink',
+      wrap: true,
       valign: 'top'
     });
 
-    // C. WORK HISTORY (Bulleted List)
-    if (experienceText) {
-      slide.addText(experienceText, {
-        x: slot.experience.x,
-        y: slot.experience.y + 0.60,
-        w: slot.experience.w,
-        h: 0.65,
-        fontSize: fonts.experience,
-        color: this.hexToRgb(colors.experience),
-        bullet: true,
-        fit: 'shrink',
-        wrap: true,
-        valign: 'top'
-      });
-    }
+    // B. WORK HISTORY (Bulleted List below name)
+    // More space for work history since we removed the role line
+    slide.addText(experienceText, {
+      x: slot.experience.x,
+      y: slot.experience.y + 0.30,
+      w: slot.experience.w,
+      h: slot.experience.h - 0.35, // Use most of the box height minus name
+      fontSize: fonts.experience,
+      color: this.hexToRgb(colors.experience),
+      bullet: true,
+      fit: 'shrink',
+      wrap: true,
+      valign: 'top'
+    });
   }
 
   /**

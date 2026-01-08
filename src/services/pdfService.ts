@@ -18,6 +18,7 @@ export class PDFService {
 
   /**
    * Parse PDF file and extract text from all pages
+   * Preserves line breaks by detecting Y-position changes
    */
   static async parsePDF(file: File): Promise<string[]> {
     const arrayBuffer = await file.arrayBuffer();
@@ -28,9 +29,26 @@ export class PDFService {
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ');
+
+      // Preserve line breaks by detecting Y-position changes
+      let pageText = '';
+      let lastY = -1;
+
+      textContent.items.forEach((item: any, idx: number) => {
+        const currentY = item.transform[5]; // Y-coordinate
+
+        // If Y position changes significantly (>2 units), it's a new line
+        if (lastY !== -1 && Math.abs(currentY - lastY) > 2) {
+          pageText += '\n';
+        } else if (idx > 0) {
+          // Same line, add space between words
+          pageText += ' ';
+        }
+
+        pageText += item.str;
+        lastY = currentY;
+      });
+
       pageTexts.push(pageText);
     }
 
@@ -39,7 +57,7 @@ export class PDFService {
 
   /**
    * Split PDF pages into individual CVs based on "Page 1 of" markers
-   * Each CV starts when we detect "Page 1 of" text
+   * Supports multiple formats: "Page 1 of X", "Page 1/X", "1 of X", "1/X"
    */
   static splitIntoCVs(pageTexts: string[]): ParsedCV[] {
     const cvs: ParsedCV[] = [];
@@ -48,8 +66,16 @@ export class PDFService {
     pageTexts.forEach((pageText, index) => {
       const normalizedText = pageText.replace(/\s+/g, ' ').toLowerCase();
 
-      // Detect "page 1 of" marker (case-insensitive, handles various spacing)
-      const isNewCV = /page\s*1\s*of\s*\d+/i.test(normalizedText);
+      // Detect various "page 1" patterns (case-insensitive)
+      const patterns = [
+        /page\s*1\s*of\s*\d+/i,     // "Page 1 of 3"
+        /page\s*1\s*\/\s*\d+/i,     // "Page 1 / 3" or "Page 1/3"
+        /^1\s*of\s*\d+/i,           // "1 of 3" at start of text
+        /^1\s*\/\s*\d+/i,           // "1/3" at start of text
+        /\bpage\s*1\b/i,            // Just "Page 1" (more lenient)
+      ];
+
+      const isNewCV = patterns.some(pattern => pattern.test(normalizedText));
 
       if (isNewCV) {
         // Start a new CV
