@@ -113,6 +113,7 @@ export class SlideGenerator {
       .join('\n');
 
     // --- LEFT COLUMN: EDUCATION ---
+    // Starts at 10pt, automatically shrinks if content is too long (min 6pt)
     if (educationText) {
       slide.addText(educationText, {
         x: slot.education.x,
@@ -121,7 +122,7 @@ export class SlideGenerator {
         h: slot.education.h,
         fontSize: fonts.education,
         color: this.hexToRgb(colors.education),
-        fit: 'shrink',
+        fit: 'shrink',  // Dynamic sizing - shrinks to fit content
         wrap: true,
         valign: 'top',
         lineSpacing: 12
@@ -131,6 +132,7 @@ export class SlideGenerator {
     // --- RIGHT COLUMN: NAME + EXPERIENCE ---
 
     // A. NAME (top of right column, in CAPS and bold)
+    // Fixed 13pt font - does NOT shrink to maintain prominence
     slide.addText(candidate.name.toUpperCase(), {
       x: slot.experience.x,
       y: slot.experience.y,
@@ -139,13 +141,12 @@ export class SlideGenerator {
       fontSize: fonts.name,
       color: this.hexToRgb(colors.name),
       bold: true,
-      fit: 'shrink',
       wrap: true,
       valign: 'top'
     });
 
     // B. WORK HISTORY (Bulleted List below name)
-    // More space for work history since we removed the role line
+    // Starts at 10pt, automatically shrinks if content is too long (min 6pt)
     slide.addText(experienceText, {
       x: slot.experience.x,
       y: slot.experience.y + 0.30,
@@ -154,7 +155,7 @@ export class SlideGenerator {
       fontSize: fonts.experience,
       color: this.hexToRgb(colors.experience),
       bullet: true,
-      fit: 'shrink',
+      fit: 'shrink',  // Dynamic sizing - shrinks to fit content
       wrap: true,
       valign: 'top'
     });
