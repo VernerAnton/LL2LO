@@ -40,7 +40,10 @@ export class SlideGenerator {
       prs.author = 'LL2LO - LongList to LibreOffice';
       prs.title = `Candidate Longlist - ${new Date().toLocaleDateString()}`;
 
-      // 2. Process Candidates in Batches of 4
+      // 2. Define slide master with template styling (yellow boxes + logo)
+      this.defineTemplateMaster(prs);
+
+      // 3. Process Candidates in Batches of 4
       const totalSlides = Math.ceil(candidates.length / 4);
       let slideCount = 0;
 
@@ -50,16 +53,16 @@ export class SlideGenerator {
 
         const group = candidates.slice(i, i + 4);
 
-        // Create a new slide
-        const slide = prs.addSlide();
+        // Create a new slide using the template master
+        const slide = prs.addSlide({ masterName: 'TEMPLATE_MASTER' });
 
-        // 3. Place each candidate in their slot
+        // 4. Place each candidate in their slot
         group.forEach((candidate, idx) => {
           this.addCandidateToSlide(slide, candidate, idx);
         });
       }
 
-      // 4. Save with descriptive filename
+      // 5. Save with descriptive filename
       const filename = `Candidates_${candidates.length}_${new Date().toISOString().slice(0, 10)}.pptx`;
       console.log(`💾 Saving presentation: ${filename}`);
       await prs.writeFile({ fileName: filename });
@@ -159,6 +162,53 @@ export class SlideGenerator {
       wrap: true,
       valign: 'top'
     });
+  }
+
+  /**
+   * Define slide master that recreates the template design
+   * - Yellow/cream background boxes for Education and Experience columns
+   * - Company logo in top-right corner
+   */
+  private static defineTemplateMaster(prs: any): void {
+    prs.defineSlideMaster({
+      title: 'TEMPLATE_MASTER',
+      background: { color: 'FFFFFF' }, // White background
+      objects: [
+        // Left column background (Education) - Yellow/cream color
+        {
+          rect: {
+            x: 0.65,           // Start of left column (slightly left of text)
+            y: 0.5,            // Top of slide
+            w: 4.15,           // Width covering all 4 education boxes
+            h: 7.0,            // Full height of slide
+            fill: { color: 'FFF9E6' }  // Light yellow/cream color
+          }
+        },
+        // Right column background (Experience) - Lighter yellow/cream
+        {
+          rect: {
+            x: 4.70,           // Start of right column
+            y: 0.5,            // Top of slide
+            w: 5.45,           // Width covering all 4 experience boxes
+            h: 7.0,            // Full height of slide
+            fill: { color: 'FFFEF5' }  // Very light yellow/cream
+          }
+        },
+        // Company logo (top-right corner)
+        // NOTE: Requires logo file at public/assets/suorahaku-logo.png
+        {
+          image: {
+            x: 9.5,            // Right side of slide
+            y: 0.3,            // Top margin
+            w: 1.0,            // Logo width (adjust as needed)
+            h: 0.4,            // Logo height (adjust as needed)
+            path: 'assets/suorahaku-logo.png'  // Path relative to public/
+          }
+        }
+      ]
+    });
+
+    console.log('✅ Slide master defined with template styling');
   }
 
   /**
