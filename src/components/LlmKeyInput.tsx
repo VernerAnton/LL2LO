@@ -1,21 +1,25 @@
 import { useState } from 'react';
-import type { AiProvider, ActualTheme } from '../types';
+import type { AiProvider, ActualTheme, AnthropicModel } from '../types';
 
 interface LlmKeyInputProps {
   existingKey: string | null;
   provider: AiProvider;
+  anthropicModel: AnthropicModel;
   onSave: (key: string) => void;
   onRemove: () => void;
   onProviderChange: (provider: AiProvider) => void;
+  onModelChange: (model: AnthropicModel) => void;
   theme: ActualTheme;
 }
 
 export function LlmKeyInput({
   existingKey,
   provider,
+  anthropicModel,
   onSave,
   onRemove,
   onProviderChange,
+  onModelChange,
   theme,
 }: LlmKeyInputProps) {
   const [inputValue, setInputValue] = useState('');
@@ -108,6 +112,85 @@ export function LlmKeyInput({
           </button>
         </div>
       </div>
+
+      {/* Model Selection (Anthropic only) */}
+      {provider === 'anthropic' && (
+        <div style={{ marginBottom: '1rem' }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: '0.75rem',
+              marginBottom: '0.5rem',
+              opacity: 0.8,
+              color: textColor,
+            }}
+          >
+            MODEL:
+          </label>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => onModelChange('claude-3-5-haiku-20241022')}
+              style={{
+                padding: '0.5rem 1rem',
+                background: anthropicModel === 'claude-3-5-haiku-20241022' ? textColor : 'none',
+                border: `2px solid ${borderColor}`,
+                color: anthropicModel === 'claude-3-5-haiku-20241022' ? bgColor : textColor,
+                fontFamily: 'Courier New, monospace',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                letterSpacing: '0.1em',
+                fontSize: '0.75rem',
+              }}
+            >
+              [ HAIKU 3.5 ]
+            </button>
+            <button
+              onClick={() => onModelChange('claude-3-5-sonnet-20241022')}
+              style={{
+                padding: '0.5rem 1rem',
+                background: anthropicModel === 'claude-3-5-sonnet-20241022' ? textColor : 'none',
+                border: `2px solid ${borderColor}`,
+                color: anthropicModel === 'claude-3-5-sonnet-20241022' ? bgColor : textColor,
+                fontFamily: 'Courier New, monospace',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                letterSpacing: '0.1em',
+                fontSize: '0.75rem',
+              }}
+            >
+              [ SONNET 3.5 ]
+            </button>
+            <button
+              onClick={() => onModelChange('claude-opus-4-5-20251101')}
+              style={{
+                padding: '0.5rem 1rem',
+                background: anthropicModel === 'claude-opus-4-5-20251101' ? textColor : 'none',
+                border: `2px solid ${borderColor}`,
+                color: anthropicModel === 'claude-opus-4-5-20251101' ? bgColor : textColor,
+                fontFamily: 'Courier New, monospace',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                letterSpacing: '0.1em',
+                fontSize: '0.75rem',
+              }}
+            >
+              [ OPUS 4.5 ]
+            </button>
+          </div>
+          <div
+            style={{
+              fontSize: '0.65rem',
+              opacity: 0.6,
+              marginTop: '0.5rem',
+              color: textColor,
+            }}
+          >
+            {anthropicModel === 'claude-3-5-haiku-20241022' && '⚡ Fastest & Cheapest ($0.25/1M in, $1.25/1M out)'}
+            {anthropicModel === 'claude-3-5-sonnet-20241022' && '⚖️ Balanced Performance ($3/1M in, $15/1M out)'}
+            {anthropicModel === 'claude-opus-4-5-20251101' && '🧠 Most Capable ($15/1M in, $75/1M out)'}
+          </div>
+        </div>
+      )}
 
       {existingKey ? (
         /* Show existing key status */
