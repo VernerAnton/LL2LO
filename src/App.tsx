@@ -6,6 +6,7 @@ import { ParseModeSelector } from './components/ParseModeSelector';
 import { FileUploader } from './components/FileUploader';
 import { ProgressIndicator } from './components/ProgressIndicator';
 import { ManualCopyOutput } from './components/ManualCopyOutput';
+import { GenerateButton } from './components/GenerateButton';
 import { StorageService } from './services/storageService';
 import { PDFService } from './services/pdfService';
 import { AIService } from './services/aiService';
@@ -173,34 +174,6 @@ function App() {
     }
   };
 
-  // TODO: Replace this with new PPTX generation logic using PptxGenJS
-  /*
-  const handleGenerateSlides = async () => {
-    if (extractedCandidates.length === 0) {
-      alert('No candidates to generate slides for');
-      return;
-    }
-
-    try {
-      setIsGeneratingSlides(true);
-      setProcessingStatus('generating');
-      console.log(`📊 Generating slides for ${extractedCandidates.length} candidates...`);
-
-      // TODO: Implement PptxGenJS logic here
-      // const pptxBlob = await PptxService.createPresentation(extractedCandidates);
-      // Download the .pptx file
-
-      setProcessingStatus('done');
-    } catch (error) {
-      console.error('❌ Error generating slides:', error);
-      setProcessingStatus('error');
-      alert('Error generating slides: ' + (error as Error).message);
-    } finally {
-      setIsGeneratingSlides(false);
-    }
-  };
-  */
-
   const borderColor = actualTheme === 'dark' ? '#e0e0e0' : '#2a2a2a';
   const bgColor = actualTheme === 'dark' ? '#2a2a2a' : '#fefdfb';
   const textColor = actualTheme === 'dark' ? '#e0e0e0' : '#2a2a2a';
@@ -304,7 +277,12 @@ function App() {
         </div>
       )}
 
-      {/* TODO: Add Generate PPTX Button here once PptxService is implemented */}
+      {extractedCandidates.length > 0 && (
+        <GenerateButton
+          candidates={extractedCandidates}
+          theme={actualTheme}
+        />
+      )}
 
       {extractedCandidates.length > 0 && (
         <div style={{
