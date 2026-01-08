@@ -64,9 +64,9 @@ export const layoutConfig: LayoutConfig = {
     education: '9CA3AF'  // Lighter Gray - Education
   },
   fonts: {
-    name: 11,          // Name (bold, caps) - slightly smaller to fit long names
+    name: 13,          // Name (bold, caps) - FIXED SIZE, never shrinks
     role: 10,          // Not used anymore, but kept for compatibility
-    experience: 8,     // Work history bullets - reduced from 9
-    education: 7       // Education - reduced from 8 (min 6pt per user)
+    experience: 10,    // Work history bullets - starts at 10pt, shrinks if needed
+    education: 10      // Education - starts at 10pt, shrinks if needed (min 6pt)
   }
 };
