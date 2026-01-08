@@ -1,15 +1,21 @@
 // Layout configuration for 4-up candidate slides
 // All measurements in INCHES (PptxGenJS standard)
+// Layout: 2 columns (Education left, Name/Work right) × 4 rows (candidates)
 
-export interface LayoutSlot {
+export interface LayoutBox {
   x: number;
   y: number;
   w: number;
   h: number;
 }
 
+export interface CandidateSlot {
+  education: LayoutBox;  // Left column
+  experience: LayoutBox; // Right column (Name + Role + Work History)
+}
+
 export interface LayoutConfig {
-  slots: LayoutSlot[];
+  slots: CandidateSlot[];
   colors: {
     name: string;
     role: string;
@@ -24,14 +30,32 @@ export interface LayoutConfig {
   };
 }
 
-// Coordinates measured from 4-up template
-// Layout: 2x2 grid (Top-Left, Top-Right, Bottom-Left, Bottom-Right)
+// Coordinates converted from cm to inches (1 cm = 0.3937007874 in)
+// Education column: x=0.7480, w=3.9449
+// Experience column: x=4.8110, w=5.1772
+// 4 rows with uniform height: h=1.2992
 export const layoutConfig: LayoutConfig = {
   slots: [
-    { x: 0.748, y: 0.689, w: 3.945, h: 1.299 }, // Top-Left
-    { x: 4.811, y: 0.689, w: 5.177, h: 1.299 }, // Top-Right
-    { x: 0.748, y: 1.988, w: 3.945, h: 1.299 }, // Bottom-Left
-    { x: 4.811, y: 1.988, w: 5.177, h: 1.299 }  // Bottom-Right
+    // Candidate 1 (Row 1)
+    {
+      education: { x: 0.7480, y: 0.6890, w: 3.9449, h: 1.2992 },
+      experience: { x: 4.8110, y: 0.6890, w: 5.1772, h: 1.2992 }
+    },
+    // Candidate 2 (Row 2)
+    {
+      education: { x: 0.7480, y: 1.9882, w: 3.9449, h: 1.2992 },
+      experience: { x: 4.8110, y: 1.9882, w: 5.1772, h: 1.2992 }
+    },
+    // Candidate 3 (Row 3)
+    {
+      education: { x: 0.7480, y: 3.2874, w: 3.9449, h: 1.2992 },
+      experience: { x: 4.8110, y: 3.2874, w: 5.1772, h: 1.2992 }
+    },
+    // Candidate 4 (Row 4)
+    {
+      education: { x: 0.7480, y: 4.5866, w: 3.9449, h: 1.2992 },
+      experience: { x: 4.8110, y: 4.5866, w: 5.1772, h: 1.2992 }
+    }
   ],
   colors: {
     name: '1F2937',      // Dark Gray - Candidate name
