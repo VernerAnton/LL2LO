@@ -10,7 +10,7 @@ import { GenerateButton } from './components/GenerateButton';
 import { StorageService } from './services/storageService';
 import { PDFService } from './services/pdfService';
 import { AIService } from './services/aiService';
-import type { Theme, ActualTheme, ProcessingStatus, CandidateData, ProcessingError, ParseMode, AiProvider } from './types';
+import type { Theme, ActualTheme, ProcessingStatus, CandidateData, ProcessingError, ParseMode, AiProvider, AnthropicModel } from './types';
 
 function App() {
   const [themePreference, setThemePreference] = useState<Theme>(() => StorageService.getTheme());
@@ -18,6 +18,7 @@ function App() {
 
   const [apiKey, setApiKey] = useState<string | null>(() => StorageService.getApiKey());
   const [aiProvider, setAiProvider] = useState<AiProvider>(() => StorageService.getAiProvider());
+  const [anthropicModel, setAnthropicModel] = useState<AnthropicModel>(() => StorageService.getAnthropicModel());
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>('idle');
@@ -38,7 +39,8 @@ function App() {
       AIService.setApiKey(apiKey);
     }
     AIService.setProvider(aiProvider);
-  }, [apiKey, aiProvider]);
+    AIService.setAnthropicModel(anthropicModel);
+  }, [apiKey, aiProvider, anthropicModel]);
 
   useEffect(() => {
     document.body.className = `${actualTheme}-mode`;
@@ -84,6 +86,12 @@ function App() {
     setAiProvider(provider);
     StorageService.saveAiProvider(provider);
     AIService.setProvider(provider);
+  };
+
+  const handleModelChange = (model: AnthropicModel) => {
+    setAnthropicModel(model);
+    StorageService.saveAnthropicModel(model);
+    AIService.setAnthropicModel(model);
   };
 
   const handleFileSelect = async (files: File[]) => {
@@ -210,9 +218,11 @@ function App() {
       <LlmKeyInput
         existingKey={apiKey}
         provider={aiProvider}
+        anthropicModel={anthropicModel}
         onSave={handleSaveApiKey}
         onRemove={handleRemoveApiKey}
         onProviderChange={handleProviderChange}
+        onModelChange={handleModelChange}
         theme={actualTheme}
       />
 

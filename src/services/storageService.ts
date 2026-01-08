@@ -1,10 +1,11 @@
 // localStorage/sessionStorage wrapper with type safety
 
-import type { ParseMode, AiProvider } from '../types';
+import type { ParseMode, AiProvider, AnthropicModel } from '../types';
 
 const STORAGE_KEYS = {
   API_KEY: 'll2lo_api_key',
   AI_PROVIDER: 'll2lo_ai_provider',
+  ANTHROPIC_MODEL: 'll2lo_anthropic_model',
   THEME: 'theme',
   PARSE_MODE: 'll2lo_parse_mode',
 } as const;
@@ -45,6 +46,29 @@ export class StorageService {
   static getAiProvider(): AiProvider {
     const stored = localStorage.getItem(STORAGE_KEYS.AI_PROVIDER);
     return (stored === 'openai' || stored === 'anthropic') ? stored : 'anthropic';
+  }
+
+  /**
+   * Save Anthropic model preference to localStorage
+   */
+  static saveAnthropicModel(model: AnthropicModel): void {
+    localStorage.setItem(STORAGE_KEYS.ANTHROPIC_MODEL, model);
+  }
+
+  /**
+   * Get Anthropic model preference from localStorage
+   * Defaults to 'claude-3-5-sonnet-20241022' (balanced performance/cost)
+   */
+  static getAnthropicModel(): AnthropicModel {
+    const stored = localStorage.getItem(STORAGE_KEYS.ANTHROPIC_MODEL);
+    const validModels: AnthropicModel[] = [
+      'claude-3-5-haiku-20241022',
+      'claude-3-5-sonnet-20241022',
+      'claude-opus-4-5-20251101'
+    ];
+    return validModels.includes(stored as AnthropicModel)
+      ? (stored as AnthropicModel)
+      : 'claude-3-5-sonnet-20241022';
   }
 
   /**

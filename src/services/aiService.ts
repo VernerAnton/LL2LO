@@ -1,5 +1,5 @@
 // AI service for CV data extraction - Provider Agnostic (OpenAI/Anthropic)
-import type { CandidateData, WorkExperience, Education, AiProvider } from '../types';
+import type { CandidateData, WorkExperience, Education, AiProvider, AnthropicModel } from '../types';
 import { RateLimiter } from './rateLimiter';
 
 // Rate limiter instance (1 request per second to be safe)
@@ -14,6 +14,7 @@ export interface ExtractionResult {
 export class AIService {
   private static apiKey: string | null = null;
   private static provider: AiProvider = 'anthropic';
+  private static anthropicModel: AnthropicModel = 'claude-3-5-sonnet-20241022';
   private static retryDelays: number[] = [2000, 4000, 8000]; // 2s, 4s, 8s
 
   /**
@@ -30,6 +31,14 @@ export class AIService {
   static setProvider(provider: AiProvider): void {
     this.provider = provider;
     console.log(`🔧 AI Provider set to: ${provider}`);
+  }
+
+  /**
+   * Set Anthropic model (Haiku, Sonnet, or Opus)
+   */
+  static setAnthropicModel(model: AnthropicModel): void {
+    this.anthropicModel = model;
+    console.log(`🔧 Anthropic Model set to: ${model}`);
   }
 
   /**
@@ -113,21 +122,32 @@ export class AIService {
   }
 
   /**
-   * Build the extraction prompt
+   * Build the extraction prompt with explicit formatting requirements
    */
   private static buildExtractionPrompt(cvText: string): string {
-    return `Extract structured information from this CV. IMPORTANT instructions:
+    return `You are a CV data extraction specialist. Extract structured information from the CV below.
 
-1. Extract the candidate's FULL NAME
-2. Extract the LAST 5 WORK EXPERIENCES (most recent first)
-   - EXCLUDE any "Board Member", "Board Director", or similar non-operational roles
-   - ONLY include operational positions (jobs where the person actively works)
-   - Format dates as: MM/YYYY - MM/YYYY (e.g., "01/2020 - 12/2022")
-   - Use "Present" for current positions
-3. Extract ALL EDUCATION entries
-   - Format dates as: YYYY - YYYY (e.g., "2016 - 2018")
+CRITICAL INSTRUCTIONS:
 
-Return the data as JSON with this exact structure:
+1. FULL NAME
+   - Extract the candidate's complete full name
+
+2. WORK HISTORY (Maximum 5 most recent positions)
+   - EXCLUDE all board positions including: Board Member, Board Director, Advisory Board, Board of Directors, Non-Executive Director, Supervisory Board, Board Observer, Board Advisor
+   - ONLY include operational/employment positions where the person actively worked (CEO, CTO, Manager, Engineer, etc.)
+   - If someone has both operational and board roles, ONLY include the operational ones
+   - Extract: company name, job title, and dates
+   - Date format REQUIRED: MM/YYYY - MM/YYYY (example: "03/2020 - 08/2023")
+   - For current positions, use "Present" as end date (example: "01/2022 - Present")
+   - List most recent position first
+
+3. EDUCATION (ALL entries)
+   - Extract: institution name, degree/program name, and dates
+   - Date format REQUIRED: YYYY - YYYY (example: "2018 - 2020")
+   - If dates missing, omit the dates field entirely
+   - Include all education entries (no limit)
+
+REQUIRED OUTPUT FORMAT (JSON only, no other text):
 {
   "name": "Full Name",
   "workHistory": [
@@ -140,13 +160,13 @@ Return the data as JSON with this exact structure:
   "education": [
     {
       "institution": "Institution Name",
-      "degree": "Degree Name",
+      "degree": "Degree/Program Name",
       "dates": "YYYY - YYYY"
     }
   ]
 }
 
-CV Text:
+CV TEXT:
 ${cvText}`;
   }
 
@@ -198,12 +218,12 @@ ${cvText}`;
   }
 
   /**
-   * Call Anthropic API
+   * Call Anthropic API with selected model
    */
   private static async callAnthropic(prompt: string): Promise<string> {
     const url = 'https://api.anthropic.com/v1/messages';
 
-    console.log('🤖 Calling Anthropic API...');
+    console.log(`🤖 Calling Anthropic API (${this.anthropicModel})...`);
 
     const response = await fetch(url, {
       method: 'POST',
@@ -213,9 +233,10 @@ ${cvText}`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
+        model: this.anthropicModel,
         max_tokens: 2048,
         temperature: 0.1,
+        system: 'You are a helpful assistant that extracts structured data from CVs. Always respond with valid JSON only, no additional text or explanations.',
         messages: [
           {
             role: 'user',
@@ -298,6 +319,9 @@ ${cvText}`;
       'advisory board',
       'board of directors',
       'non-executive director',
+      'supervisory board',
+      'board observer',
+      'board advisor',
     ];
 
     return workHistory.filter((experience) => {
