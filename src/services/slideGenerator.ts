@@ -61,6 +61,7 @@ export class SlideGenerator {
 
   /**
    * Maps a CandidateData object to a specific slot on the slide
+   * Uses 2-column layout: Education (left) and Experience (right)
    */
   private static addCandidateToSlide(slide: any, candidate: CandidateData, slotIndex: number) {
     if (slotIndex >= layoutConfig.slots.length) return;
@@ -91,26 +92,42 @@ export class SlideGenerator {
       })
       .join('\n');
 
-    // --- DRAWING TEXT BOXES ---
+    // --- LEFT COLUMN: EDUCATION ---
+    if (educationText) {
+      slide.addText(educationText, {
+        x: slot.education.x,
+        y: slot.education.y,
+        w: slot.education.w,
+        h: slot.education.h,
+        fontSize: fonts.education,
+        color: this.hexToRgb(colors.education),
+        fit: 'shrink',
+        wrap: true,
+        valign: 'top',
+        lineSpacing: 12
+      });
+    }
 
-    // A. NAME
+    // --- RIGHT COLUMN: NAME + ROLE + EXPERIENCE ---
+
+    // A. NAME (top of right column)
     slide.addText(candidate.name, {
-      x: slot.x,
-      y: slot.y,
-      w: slot.w,
+      x: slot.experience.x,
+      y: slot.experience.y,
+      w: slot.experience.w,
       h: 0.3,
       fontSize: fonts.name,
       color: this.hexToRgb(colors.name),
       bold: true,
-      fit: 'shrink', // Auto-shrink text if name is long
+      fit: 'shrink',
       valign: 'bottom'
     });
 
     // B. ROLE (Below Name)
     slide.addText(currentRole, {
-      x: slot.x,
-      y: slot.y + 0.32,
-      w: slot.w,
+      x: slot.experience.x,
+      y: slot.experience.y + 0.32,
+      w: slot.experience.w,
       h: 0.25,
       fontSize: fonts.role,
       color: this.hexToRgb(colors.role),
@@ -118,34 +135,19 @@ export class SlideGenerator {
       valign: 'top'
     });
 
-    // C. EXPERIENCE (Bulleted List)
+    // C. WORK HISTORY (Bulleted List)
     if (experienceText) {
       slide.addText(experienceText, {
-        x: slot.x,
-        y: slot.y + 0.60,
-        w: slot.w,
+        x: slot.experience.x,
+        y: slot.experience.y + 0.60,
+        w: slot.experience.w,
         h: 0.65,
         fontSize: fonts.experience,
         color: this.hexToRgb(colors.experience),
         bullet: true,
-        fit: 'shrink', // Shrinks list to fit box
+        fit: 'shrink',
         wrap: true,
         valign: 'top'
-      });
-    }
-
-    // D. EDUCATION (Footer - no bullets, custom formatting)
-    if (educationText) {
-      slide.addText(educationText, {
-        x: slot.x,
-        y: slot.y + 1.25,
-        w: slot.w,
-        h: 0.25,
-        fontSize: fonts.education,
-        color: this.hexToRgb(colors.education),
-        fit: 'shrink',
-        valign: 'bottom',
-        lineSpacing: 10 // Tighter line spacing for education
       });
     }
   }
