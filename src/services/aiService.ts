@@ -50,7 +50,7 @@ interface AIResponse {
 export class AIService {
   private static apiKey: string | null = null;
   private static provider: AiProvider = 'anthropic';
-  private static anthropicModel: AnthropicModel = 'claude-3-5-sonnet-20241022';
+  private static anthropicModel: AnthropicModel = 'claude-sonnet-4-5';
   private static retryDelays: number[] = [2000, 4000, 8000]; // 2s, 4s, 8s
 
   /**
@@ -129,8 +129,8 @@ export class AIService {
   private static calculateCost(inputTokens: number, outputTokens: number): number {
     const pricing: Record<string, { input: number; output: number }> = {
       // Anthropic (per 1M tokens)
-      'claude-3-5-haiku-20241022': { input: 0.25, output: 1.25 },
-      'claude-3-5-sonnet-20241022': { input: 3.00, output: 15.00 },
+      'claude-haiku-4-5': { input: 0.25, output: 1.25 },
+      'claude-sonnet-4-5': { input: 3.00, output: 15.00 },
       'claude-opus-4-5-20251101': { input: 15.00, output: 75.00 },
       // OpenAI (per 1M tokens)
       'gpt-4-turbo': { input: 10.00, output: 30.00 },

@@ -131,12 +131,12 @@ export function LlmKeyInput({
           </label>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <button
-              onClick={() => onModelChange('claude-3-5-haiku-20241022')}
+              onClick={() => onModelChange('claude-haiku-4-5')}
               style={{
                 padding: '0.5rem 1rem',
-                background: anthropicModel === 'claude-3-5-haiku-20241022' ? textColor : 'none',
+                background: anthropicModel === 'claude-haiku-4-5' ? textColor : 'none',
                 border: `2px solid ${borderColor}`,
-                color: anthropicModel === 'claude-3-5-haiku-20241022' ? bgColor : textColor,
+                color: anthropicModel === 'claude-haiku-4-5' ? bgColor : textColor,
                 fontFamily: 'Courier New, monospace',
                 fontWeight: 'bold',
                 cursor: 'pointer',
@@ -147,12 +147,12 @@ export function LlmKeyInput({
               [ HAIKU 4.5 ]
             </button>
             <button
-              onClick={() => onModelChange('claude-3-5-sonnet-20241022')}
+              onClick={() => onModelChange('claude-sonnet-4-5')}
               style={{
                 padding: '0.5rem 1rem',
-                background: anthropicModel === 'claude-3-5-sonnet-20241022' ? textColor : 'none',
+                background: anthropicModel === 'claude-sonnet-4-5' ? textColor : 'none',
                 border: `2px solid ${borderColor}`,
-                color: anthropicModel === 'claude-3-5-sonnet-20241022' ? bgColor : textColor,
+                color: anthropicModel === 'claude-sonnet-4-5' ? bgColor : textColor,
                 fontFamily: 'Courier New, monospace',
                 fontWeight: 'bold',
                 cursor: 'pointer',
@@ -187,8 +187,8 @@ export function LlmKeyInput({
               color: textColor,
             }}
           >
-            {anthropicModel === 'claude-3-5-haiku-20241022' && '⚡ Haiku 4.5 - Fastest & Cheapest ($0.25/1M in, $1.25/1M out)'}
-            {anthropicModel === 'claude-3-5-sonnet-20241022' && '⚖️ Sonnet 4.5 - Balanced Performance ($3/1M in, $15/1M out)'}
+            {anthropicModel === 'claude-haiku-4-5' && '⚡ Haiku 4.5 - Fastest & Cheapest ($0.25/1M in, $1.25/1M out)'}
+            {anthropicModel === 'claude-sonnet-4-5' && '⚖️ Sonnet 4.5 - Balanced Performance ($3/1M in, $15/1M out)'}
             {anthropicModel === 'claude-opus-4-5-20251101' && '🧠 Opus 4.5 - Most Capable ($15/1M in, $75/1M out)'}
           </div>
         </div>
