@@ -301,9 +301,13 @@ ${cvText}`;
    * Call Anthropic API with selected model
    */
   private static async callAnthropic(prompt: string): Promise<AIResponse> {
-    const url = 'https://api.anthropic.com/v1/messages';
+    // Use proxy in development to avoid CORS issues
+    const isDev = import.meta.env.DEV;
+    const url = isDev
+      ? '/api/anthropic/v1/messages'  // Proxied through Vite dev server
+      : 'https://api.anthropic.com/v1/messages'; // Direct call in production
 
-    console.log(`🤖 Calling Anthropic API (${this.anthropicModel})...`);
+    console.log(`🤖 Calling Anthropic API (${this.anthropicModel}) via ${isDev ? 'proxy' : 'direct'}...`);
 
     const response = await fetch(url, {
       method: 'POST',
