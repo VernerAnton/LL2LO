@@ -165,50 +165,19 @@ export class SlideGenerator {
   }
 
   /**
-   * Define slide master that recreates the template design
-   * - Yellow/cream background boxes for Education and Experience columns
-   * - Company logo in top-right corner
+   * Define slide master using template background image
+   * - Full template slide exported as PNG/JPG from your template PPTX
+   * - All visual elements (colors, logo, layout boxes) are burned into the background image
+   * - Text is placed on top using coordinates from layoutConfig
    */
   private static defineTemplateMaster(prs: any): void {
     prs.defineSlideMaster({
       title: 'TEMPLATE_MASTER',
-      background: { color: 'FFFFFF' }, // White background
-      objects: [
-        // Left column background (Education) - Yellow/cream color
-        {
-          rect: {
-            x: 0.65,           // Start of left column (slightly left of text)
-            y: 0.5,            // Top of slide
-            w: 4.15,           // Width covering all 4 education boxes
-            h: 7.0,            // Full height of slide
-            fill: { color: 'FFF9E6' }  // Light yellow/cream color
-          }
-        },
-        // Right column background (Experience) - Lighter yellow/cream
-        {
-          rect: {
-            x: 4.70,           // Start of right column
-            y: 0.5,            // Top of slide
-            w: 5.45,           // Width covering all 4 experience boxes
-            h: 7.0,            // Full height of slide
-            fill: { color: 'FFFEF5' }  // Very light yellow/cream
-          }
-        },
-        // Company logo (top-right corner)
-        // NOTE: Requires logo file at public/assets/suorahaku-logo.png
-        {
-          image: {
-            x: 9.5,            // Right side of slide
-            y: 0.3,            // Top margin
-            w: 1.0,            // Logo width (adjust as needed)
-            h: 0.4,            // Logo height (adjust as needed)
-            path: 'assets/suorahaku-logo.png'  // Path relative to public/
-          }
-        }
-      ]
+      background: { path: 'assets/template-background.png' }, // Full template slide as background
+      objects: []  // No additional objects needed - everything is in the background image
     });
 
-    console.log('✅ Slide master defined with template styling');
+    console.log('✅ Slide master defined with template background image');
   }
 
   /**

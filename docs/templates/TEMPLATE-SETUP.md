@@ -2,103 +2,96 @@
 
 ## Overview
 
-The LL2LO generator uses a **programmatic slide master** to recreate your template design. Since PptxGenJS cannot load external PPTX files, the template's visual elements (colors, logo, layout) are defined in code.
+The LL2LO generator uses your **template slide as a background image**. Your full template slide (with colors, logo, layout boxes) is exported as a PNG/JPG and used as the background for all generated slides.
 
 ## Current Implementation
 
-The slide master is defined in `src/services/slideGenerator.ts` using the `defineTemplateMaster()` method.
+The slide master is defined in `src/services/slideGenerator.ts:173` using the `defineTemplateMaster()` method, which loads your template image as the slide background.
 
 ### What's Included:
-- ✅ **Yellow/cream background boxes** (2-column layout)
-- ✅ **Company logo** (top-right corner)
-- ✅ **Precise coordinates** matching your template design
+- ✅ **Exact template design** (all visual elements preserved)
+- ✅ **Company logo** (already positioned in the image)
+- ✅ **Colors and styling** (exactly matching your template)
 - ✅ **8-box layout** (2 columns × 4 rows)
 
 ## Required Setup
 
-### 1. Extract Logo from Template
+### 1. Export Template Slide as Image
 
-1. Open your template PPTX file (`suorahaku-template.pptx`)
-2. Right-click on the **suorahaku-toimisto logo**
+**Method 1: Save as Picture (Recommended)**
+1. Open your template PPTX file
+2. Right-click on the slide thumbnail in the left panel
 3. Select **"Save as Picture..."**
-4. Save as `suorahaku-logo.png` (PNG with transparent background preferred)
-5. Place in: `/public/assets/suorahaku-logo.png`
+4. Choose **PNG format** (better quality)
+5. Save as `template-background.png`
+6. Move to: `public/assets/template-background.png`
 
-### 2. Verify Logo Path
+**Method 2: Export via File Menu**
+1. Open your template PPTX file
+2. File → Export → Change File Type → **PNG** or **JPG**
+3. Click "Save As"
+4. Select **"Just This One"** (exports current slide only)
+5. Save as `template-background.png`
+6. Move to: `public/assets/template-background.png`
 
-The code expects the logo at:
+**Recommended Settings:**
+- Format: PNG (best quality) or JPG (smaller file size)
+- Resolution: 1920×1080 pixels (standard 16:9 HD)
+- File name: `template-background.png`
+
+### 2. Verify File Path
+
+The code expects the background image at:
 ```
-public/assets/suorahaku-logo.png
+public/assets/template-background.png
 ```
 
-If you use a different name or format (`.jpg`), update `slideGenerator.ts:205`:
+If you use a different name or format, update `slideGenerator.ts:176`:
 ```typescript
-path: 'assets/suorahaku-logo.png'  // Change to your filename
-```
-
-### 3. Adjust Colors (Optional)
-
-If the yellow/cream colors don't match your template exactly, adjust the hex codes in `slideGenerator.ts:184` and `slideGenerator.ts:194`:
-
-```typescript
-// Left column (Education)
-fill: { color: 'FFF9E6' }  // Light yellow/cream
-
-// Right column (Experience)
-fill: { color: 'FFFEF5' }  // Very light yellow/cream
-```
-
-**How to find hex codes:**
-1. Open your template in PowerPoint
-2. Click on a yellow box
-3. Format Shape → Fill → More Colors → Custom
-4. Copy the hex code (without #)
-
-### 4. Adjust Logo Size/Position (Optional)
-
-If the logo appears too large/small or misaligned, adjust in `slideGenerator.ts:201-204`:
-
-```typescript
-{
-  image: {
-    x: 9.5,    // Horizontal position (inches from left)
-    y: 0.3,    // Vertical position (inches from top)
-    w: 1.0,    // Width in inches
-    h: 0.4,    // Height in inches
-    path: 'assets/suorahaku-logo.png'
-  }
-}
+background: { path: 'assets/template-background.png' }  // Change to your filename
 ```
 
 ## Testing
 
-1. Add your logo to `public/assets/suorahaku-logo.png`
+1. Add your template background to `public/assets/template-background.png`
 2. Run the app: `npm run dev`
-3. Generate a test presentation
-4. Check if colors and logo match your template
-5. Adjust colors/position if needed
+3. Upload a test PDF and generate slides
+4. Check if the background appears correctly
+5. Verify text is positioned properly on top of the background
 
-## Reference Template (Optional)
+## Keeping Template PPTX (Recommended)
 
-You can still keep your original template PPTX in `docs/templates/` for reference:
-- `docs/templates/suorahaku-template.pptx` ← Your original design reference
+Keep your original template PPTX in `docs/templates/` for easy updates:
+```bash
+mkdir -p docs/templates
+cp /path/to/your/template.pptx docs/templates/suorahaku-template.pptx
+```
 
-This helps when you need to check exact colors, spacing, or logo placement.
+**Why keep it?**
+- If you need to change colors, logo, or layout
+- Just update the PPTX and re-export as PNG/JPG
+- No code changes needed
 
 ## Technical Details
 
-**Why not load the PPTX directly?**
-- PptxGenJS (the library we use) doesn't support loading external PPTX files as templates
-- It's designed to generate presentations from scratch
-- The slide master approach recreates your design programmatically
+**Why use a background image instead of loading the PPTX?**
+- PptxGenJS doesn't support loading external PPTX files as templates
+- Background image approach gives pixel-perfect results
+- All visual elements (colors, logo, layout) are preserved exactly
+
+**How It Works:**
+1. Your template slide is exported as a PNG/JPG image
+2. PptxGenJS uses this image as the slide background via `defineSlideMaster()`
+3. Text is added on top using coordinates from `layoutConfig.ts`
+4. Result: Slides look identical to your template
 
 **Advantages:**
-- ✅ Same visual result as using a template
-- ✅ Full control over styling
-- ✅ No external dependencies
-- ✅ Logo and colors always consistent
-- ✅ Easy to modify colors/logo programmatically
+- ✅ **Pixel-perfect accuracy** - exact match to your template
+- ✅ **Easy to update** - just re-export the image if template changes
+- ✅ **No color matching** - all styling is in the image
+- ✅ **Logo already positioned** - everything is in one file
+- ✅ **Simple implementation** - one background image instead of complex code
 
 **Limitations:**
-- ⚠️ Requires manual color/position adjustments if template changes
-- ⚠️ Logo must be extracted as a separate image file
+- ⚠️ File size: PNG is ~100-500KB (JPG is smaller but lower quality)
+- ⚠️ If template changes, must re-export the image
