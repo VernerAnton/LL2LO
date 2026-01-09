@@ -205,6 +205,12 @@ function App() {
           completedCount++;
           setProgressCurrent(completedCount);
         }
+
+        // Update state after each batch to show results in real-time
+        setExtractedCandidates([...candidates]);
+        setFailedExtractions([...errors]);
+        setTotalCost(cumulativeCost);
+        setTotalTokens(cumulativeTokens);
       }
 
       setTotalCost(cumulativeCost);
@@ -294,7 +300,7 @@ function App() {
       />
 
       {/* Cost Tracking Display */}
-      {processingStatus === 'done' && totalTokens > 0 && (
+      {(processingStatus === 'extracting' || processingStatus === 'done') && totalTokens > 0 && (
         <div
           style={{
             padding: '1.5rem',
@@ -313,7 +319,7 @@ function App() {
               color: textColor,
             }}
           >
-            [ API USAGE SUMMARY ]
+            [ {processingStatus === 'extracting' ? '⏳ ' : ''}API USAGE SUMMARY{processingStatus === 'extracting' ? ' (IN PROGRESS)' : ''} ]
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div style={{ color: textColor }}>
@@ -406,7 +412,7 @@ function App() {
             letterSpacing: '0.1em',
             color: textColor
           }}>
-            [ ✅ EXTRACTED CANDIDATES: {extractedCandidates.length} ]
+            [ {processingStatus === 'extracting' ? '⏳' : '✅'} EXTRACTED CANDIDATES: {extractedCandidates.length}{processingStatus === 'extracting' ? ` / ${progressTotal}` : ''} ]
           </div>
           {extractedCandidates.map((candidate, index) => (
             <div
