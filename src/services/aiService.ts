@@ -308,6 +308,8 @@ ${cvText}`;
       : 'https://api.anthropic.com/v1/messages'; // Direct call in production
 
     console.log(`🤖 Calling Anthropic API (${this.anthropicModel}) via ${isDev ? 'proxy' : 'direct'}...`);
+    console.log(`🔑 API Key prefix: ${this.apiKey?.substring(0, 15)}...`);
+    console.log(`📡 Request URL: ${url}`);
 
     const response = await fetch(url, {
       method: 'POST',
@@ -332,7 +334,9 @@ ${cvText}`;
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Anthropic API Error:', errorText);
+      console.error('❌ Anthropic API Error Response:', errorText);
+      console.error('❌ Response Status:', response.status, response.statusText);
+      console.error('❌ Response Headers:', Object.fromEntries(response.headers.entries()));
       throw new Error(`Anthropic API request failed: ${response.status} ${response.statusText}`);
     }
 
