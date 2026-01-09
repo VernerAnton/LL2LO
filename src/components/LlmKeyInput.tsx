@@ -200,8 +200,8 @@ export function LlmKeyInput({
           <div
             style={{
               display: 'flex',
-              alignItems: 'center',
-              gap: '1rem',
+              alignItems: 'stretch',
+              gap: '0.5rem',
               marginBottom: '0.5rem',
             }}
           >
@@ -212,44 +212,51 @@ export function LlmKeyInput({
                 border: `1px solid ${borderColor}`,
                 background: theme === 'dark' ? '#1a1a1a' : '#fff',
                 fontFamily: 'Courier New, monospace',
-                fontSize: '0.875rem',
+                fontSize: '0.75rem',
                 color: textColor,
+                overflow: 'hidden',
+                wordBreak: 'break-all',
+                minWidth: 0, // Important for flex items to shrink below content size
               }}
             >
               {showKey ? existingKey : '●'.repeat(20)}
             </div>
-            <button
-              onClick={() => setShowKey(!showKey)}
-              style={{
-                padding: '0.75rem 1rem',
-                background: 'none',
-                border: `2px solid ${borderColor}`,
-                color: textColor,
-                fontFamily: 'Courier New, monospace',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                letterSpacing: '0.1em',
-                fontSize: '0.75rem',
-              }}
-            >
-              {showKey ? '[ HIDE ]' : '[ SHOW ]'}
-            </button>
-            <button
-              onClick={onRemove}
-              style={{
-                padding: '0.75rem 1rem',
-                background: 'none',
-                border: `2px solid #ff6b6b`,
-                color: '#ff6b6b',
-                fontFamily: 'Courier New, monospace',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                letterSpacing: '0.1em',
-                fontSize: '0.75rem',
-              }}
-            >
-              [ REMOVE ]
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+              <button
+                onClick={() => setShowKey(!showKey)}
+                style={{
+                  padding: '0.75rem 1rem',
+                  background: 'none',
+                  border: `2px solid ${borderColor}`,
+                  color: textColor,
+                  fontFamily: 'Courier New, monospace',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  letterSpacing: '0.1em',
+                  fontSize: '0.75rem',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {showKey ? '[ HIDE ]' : '[ SHOW ]'}
+              </button>
+              <button
+                onClick={onRemove}
+                style={{
+                  padding: '0.75rem 1rem',
+                  background: 'none',
+                  border: `2px solid #ff6b6b`,
+                  color: '#ff6b6b',
+                  fontFamily: 'Courier New, monospace',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  letterSpacing: '0.1em',
+                  fontSize: '0.75rem',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                [ REMOVE ]
+              </button>
+            </div>
           </div>
           <div
             style={{
