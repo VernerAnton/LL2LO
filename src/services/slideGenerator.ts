@@ -40,7 +40,10 @@ export class SlideGenerator {
       prs.author = 'LL2LO - LongList to LibreOffice';
       prs.title = `Candidate Longlist - ${new Date().toLocaleDateString()}`;
 
-      // 2. Process Candidates in Batches of 4
+      // 2. Define slide master with template styling (yellow boxes + logo)
+      this.defineTemplateMaster(prs);
+
+      // 3. Process Candidates in Batches of 4
       const totalSlides = Math.ceil(candidates.length / 4);
       let slideCount = 0;
 
@@ -50,16 +53,16 @@ export class SlideGenerator {
 
         const group = candidates.slice(i, i + 4);
 
-        // Create a new slide
-        const slide = prs.addSlide();
+        // Create a new slide using the template master
+        const slide = prs.addSlide({ masterName: 'TEMPLATE_MASTER' });
 
-        // 3. Place each candidate in their slot
+        // 4. Place each candidate in their slot
         group.forEach((candidate, idx) => {
           this.addCandidateToSlide(slide, candidate, idx);
         });
       }
 
-      // 4. Save with descriptive filename
+      // 5. Save with descriptive filename
       const filename = `Candidates_${candidates.length}_${new Date().toISOString().slice(0, 10)}.pptx`;
       console.log(`💾 Saving presentation: ${filename}`);
       await prs.writeFile({ fileName: filename });
@@ -159,6 +162,22 @@ export class SlideGenerator {
       wrap: true,
       valign: 'top'
     });
+  }
+
+  /**
+   * Define slide master using template background image
+   * - Full template slide exported as PNG/JPG from your template PPTX
+   * - All visual elements (colors, logo, layout boxes) are burned into the background image
+   * - Text is placed on top using coordinates from layoutConfig
+   */
+  private static defineTemplateMaster(prs: any): void {
+    prs.defineSlideMaster({
+      title: 'TEMPLATE_MASTER',
+      background: { path: 'assets/template-background.png' }, // Full template slide as background
+      objects: []  // No additional objects needed - everything is in the background image
+    });
+
+    console.log('✅ Slide master defined with template background image');
   }
 
   /**
