@@ -58,18 +58,18 @@ export class StorageService {
 
   /**
    * Get Anthropic model preference from localStorage
-   * Defaults to 'claude-3-5-sonnet-20241022' (balanced performance/cost)
+   * Defaults to 'claude-sonnet-4-5' (balanced performance/cost)
    */
   static getAnthropicModel(): AnthropicModel {
     const stored = localStorage.getItem(STORAGE_KEYS.ANTHROPIC_MODEL);
     const validModels: AnthropicModel[] = [
-      'claude-3-5-haiku-20241022',
-      'claude-3-5-sonnet-20241022',
+      'claude-haiku-4-5',
+      'claude-sonnet-4-5',
       'claude-opus-4-5-20251101'
     ];
     return validModels.includes(stored as AnthropicModel)
       ? (stored as AnthropicModel)
-      : 'claude-3-5-sonnet-20241022';
+      : 'claude-sonnet-4-5';
   }
 
   /**
@@ -142,12 +142,12 @@ export class StorageService {
 
   /**
    * Get concurrency level preference
-   * Defaults to 3 (recommended for Tier 1)
+   * Defaults to 1 (safest for free tier / Tier 1 - prevents 429 errors)
    */
   static getConcurrencyLevel(): ConcurrencyLevel {
     const stored = localStorage.getItem(STORAGE_KEYS.CONCURRENCY_LEVEL);
-    const level = parseInt(stored || '3', 10);
-    return (level >= 1 && level <= 5) ? level as ConcurrencyLevel : 3;
+    const level = parseInt(stored || '1', 10);
+    return (level >= 1 && level <= 5) ? level as ConcurrencyLevel : 1;
   }
 
   /**

@@ -15,11 +15,11 @@ export function ConcurrencySelector({ level, onLevelChange, theme }: Concurrency
 
   const getDescription = (lvl: ConcurrencyLevel): string => {
     switch (lvl) {
-      case 1: return 'Sequential (1 req/sec) - Slowest, safest';
-      case 2: return 'Low parallel (2 concurrent) - Safe for all tiers';
-      case 3: return 'Medium parallel (3 concurrent) - Recommended for Tier 1';
-      case 4: return 'High parallel (4 concurrent) - Good for Tier 1+';
-      case 5: return 'Max parallel (5 concurrent) - Fastest, may hit rate limits';
+      case 1: return 'Sequential (1 req/sec) - Safest, best for free tier';
+      case 2: return 'Low parallel (2 concurrent) - Safe for most use cases';
+      case 3: return 'Medium parallel (3 concurrent) - May cause rate limits on free tier';
+      case 4: return 'High parallel (4 concurrent) - Requires paid tier to avoid 429s';
+      case 5: return 'Max parallel (5 concurrent) - Fastest, but will likely hit rate limits on free tier';
       default: return '';
     }
   };
@@ -41,9 +41,22 @@ export function ConcurrencySelector({ level, onLevelChange, theme }: Concurrency
           marginBottom: '1rem',
           letterSpacing: '0.1em',
           color: textColor,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
         }}
       >
-        [ CONCURRENCY LEVEL ]
+        <span>[ CONCURRENCY LEVEL ]</span>
+        <span
+          title="ℹ️ Free tier users: Use level 1 to avoid rate limits (429 errors). Higher levels process CVs faster but may exceed your rate limit."
+          style={{
+            cursor: 'help',
+            fontSize: '0.875rem',
+            opacity: 0.6,
+          }}
+        >
+          ⓘ
+        </span>
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
@@ -87,7 +100,7 @@ export function ConcurrencySelector({ level, onLevelChange, theme }: Concurrency
           color: textColor,
         }}
       >
-        💡 Higher concurrency = faster processing, but may hit API rate limits on lower tiers
+        ⚠️  Free tier users: Level 1 recommended to avoid rate limits. Higher levels may cause 429 errors.
       </div>
     </div>
   );
