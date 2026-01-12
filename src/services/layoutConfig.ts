@@ -1,6 +1,6 @@
 // Layout configuration for 4-up candidate slides
 // All measurements in INCHES (PptxGenJS standard)
-// Layout: 2 columns (Education left, Name/Work right) × 4 rows (candidates)
+// Converted from User CM: X1=1.63, X2=12.22, Y=[1.98, 6.12, 10.4, 14.97]
 
 export interface LayoutBox {
   x: number;
@@ -30,31 +30,27 @@ export interface LayoutConfig {
   };
 }
 
-// Coordinates converted from cm to inches (1 cm = 0.3937007874 in)
-// Education column: x=0.7480, w=3.9449
-// Experience column: x=4.8110, w=5.1772
-// 4 rows with uniform height: h=1.2992
 export const layoutConfig: LayoutConfig = {
   slots: [
-    // Candidate 1 (Row 1)
+    // Candidate 1 (Row 1) - Y: 1.98cm
     {
-      education: { x: 0.7480, y: 0.6890, w: 3.9449, h: 1.2992 },
-      experience: { x: 4.8110, y: 0.6890, w: 5.1772, h: 1.2992 }
+      education: { x: 0.64, y: 0.78, w: 3.94, h: 1.55 },
+      experience: { x: 4.81, y: 0.78, w: 5.18, h: 1.55 }
     },
-    // Candidate 2 (Row 2)
+    // Candidate 2 (Row 2) - Y: 6.12cm
     {
-      education: { x: 0.7480, y: 1.9882, w: 3.9449, h: 1.2992 },
-      experience: { x: 4.8110, y: 1.9882, w: 5.1772, h: 1.2992 }
+      education: { x: 0.64, y: 2.41, w: 3.94, h: 1.55 },
+      experience: { x: 4.81, y: 2.41, w: 5.18, h: 1.55 }
     },
-    // Candidate 3 (Row 3)
+    // Candidate 3 (Row 3) - Y: 10.4cm
     {
-      education: { x: 0.7480, y: 3.2874, w: 3.9449, h: 1.2992 },
-      experience: { x: 4.8110, y: 3.2874, w: 5.1772, h: 1.2992 }
+      education: { x: 0.64, y: 4.09, w: 3.94, h: 1.55 },
+      experience: { x: 4.81, y: 4.09, w: 5.18, h: 1.55 }
     },
-    // Candidate 4 (Row 4)
+    // Candidate 4 (Row 4) - Y: 14.97cm
     {
-      education: { x: 0.7480, y: 4.5866, w: 3.9449, h: 1.2992 },
-      experience: { x: 4.8110, y: 4.5866, w: 5.1772, h: 1.2992 }
+      education: { x: 0.64, y: 5.89, w: 3.94, h: 1.55 },
+      experience: { x: 4.81, y: 5.89, w: 5.18, h: 1.55 }
     }
   ],
   colors: {
@@ -64,9 +60,9 @@ export const layoutConfig: LayoutConfig = {
     education: '000000'  // Black - Education
   },
   fonts: {
-    name: 13,          // Name (bold, caps) - FIXED SIZE, never shrinks
-    role: 10,          // Not used anymore, but kept for compatibility
-    experience: 10,    // Work history bullets - starts at 10pt, shrinks if needed
-    education: 10      // Education - starts at 10pt, shrinks if needed (min 6pt)
+    name: 13,          // Name (bold, caps)
+    role: 10,          // Not actively used
+    experience: 10,    // Bullets
+    education: 10      // Education text
   }
 };
