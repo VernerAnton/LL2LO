@@ -301,21 +301,18 @@ ${cvText}`;
    * Call Anthropic API with selected model
    */
   private static async callAnthropic(prompt: string): Promise<AIResponse> {
-    // Use proxy in development to avoid CORS issues
-    const isDev = import.meta.env.DEV;
-    const url = isDev
-      ? '/api/anthropic/v1/messages'  // Proxied through Vite dev server
-      : 'https://api.anthropic.com/v1/messages'; // Direct call in production
+    // Direct browser API call (supported since mid-2024 with CORS header)
+    const url = 'https://api.anthropic.com/v1/messages';
 
-    console.log(`🤖 Calling Anthropic API (${this.anthropicModel}) via ${isDev ? 'proxy' : 'direct'}...`);
+    console.log(`🤖 Calling Anthropic API (${this.anthropicModel}) directly from browser...`);
     console.log(`🔑 API Key prefix: ${this.apiKey?.substring(0, 15)}...`);
-    console.log(`📡 Request URL: ${url}`);
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'x-api-key': this.apiKey!,
         'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',  // Enable CORS for browser calls
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
