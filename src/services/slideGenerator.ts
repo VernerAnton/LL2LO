@@ -36,11 +36,11 @@ export class SlideGenerator {
       const prs = new PptxGenJS();
 
       // 1. Set up presentation properties
-      prs.layout = 'LAYOUT_WIDE'; // 16:9 widescreen
+      prs.layout = 'LAYOUT_4x3'; // 4:3 standard aspect ratio
       prs.author = 'LL2LO - LongList to LibreOffice';
       prs.title = `Candidate Longlist - ${new Date().toLocaleDateString()}`;
 
-      // 2. Define slide master with template styling (yellow boxes + logo)
+      // 2. Define slide master with template background image
       this.defineTemplateMaster(prs);
 
       // 3. Process Candidates in Batches of 4
@@ -107,16 +107,18 @@ export class SlideGenerator {
       : 'No operational experience found (board positions filtered)';
 
     // 2. Education: Format Education array
-    // Institution on its own line, then bullet with degree below
+    // Institution on its own line (ALL CAPS for prominence), then bullet with degree below
     const educationText = candidate.education
       .map(e => {
         const dateStr = e.dates ? ` · (${e.dates})` : '';
-        return `${e.institution}\n• ${e.degree}${dateStr}`;
+        const degree = e.degree || 'Degree not specified';
+        return `${e.institution.toUpperCase()}\n• ${degree}${dateStr}`;
       })
       .join('\n');
 
     // --- LEFT COLUMN: EDUCATION ---
     // Starts at 10pt, automatically shrinks if content is too long (min 6pt)
+    // Institution names are in ALL CAPS for visual prominence
     if (educationText) {
       slide.addText(educationText, {
         x: slot.education.x,
@@ -126,6 +128,7 @@ export class SlideGenerator {
         fontSize: fonts.education,
         color: this.hexToRgb(colors.education),
         fit: 'shrink',  // Dynamic sizing - shrinks to fit content
+        shrinkToFitMin: 6,  // Minimum font size when shrinking (prevents tiny text)
         wrap: true,
         valign: 'top',
         lineSpacing: 12
@@ -159,6 +162,7 @@ export class SlideGenerator {
       color: this.hexToRgb(colors.experience),
       bullet: true,
       fit: 'shrink',  // Dynamic sizing - shrinks to fit content
+      shrinkToFitMin: 6,  // Minimum font size when shrinking
       wrap: true,
       valign: 'top'
     });
