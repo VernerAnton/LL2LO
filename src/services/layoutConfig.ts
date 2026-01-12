@@ -58,10 +58,10 @@ export const layoutConfig: LayoutConfig = {
     }
   ],
   colors: {
-    name: '1F2937',      // Dark Gray - Candidate name
-    role: '4B5563',      // Medium Gray - Current role
-    experience: '6B7280',// Light Gray - Work history
-    education: '9CA3AF'  // Lighter Gray - Education
+    name: '000000',      // Black - Candidate name
+    role: '000000',      // Black - Current role
+    experience: '000000',// Black - Work history
+    education: '000000'  // Black - Education
   },
   fonts: {
     name: 13,          // Name (bold, caps) - FIXED SIZE, never shrinks
