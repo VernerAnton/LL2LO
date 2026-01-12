@@ -4,15 +4,6 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/LL2LO/',
-  server: {
-    proxy: {
-      '/api/anthropic': {
-        target: 'https://api.anthropic.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/anthropic/, ''),
-        // Don't set headers here - let the client request headers pass through
-      }
-    }
-  }
+  base: '/LL2LO/'
+  // No proxy needed - Anthropic supports CORS with 'anthropic-dangerous-direct-browser-access: true' header
 })
