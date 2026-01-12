@@ -15,14 +15,14 @@ const WorkExperienceSchema = z.object({
 
 const EducationSchema = z.object({
   institution: z.string().min(1, 'Institution name is required'),
-  degree: z.string().min(1, 'Degree is required'),
+  degree: z.string().optional(), // Degree is optional - some people don't have education on LinkedIn
   dates: z.string().optional(),
 });
 
 const CVDataSchema = z.object({
   name: z.string().min(1, 'Candidate name is required'),
   workHistory: z.array(WorkExperienceSchema).max(5, 'Maximum 5 work experiences'),
-  education: z.array(EducationSchema),
+  education: z.array(EducationSchema).optional().default([]), // Education can be completely empty
 });
 
 export interface TokenUsage {
@@ -95,7 +95,7 @@ export class AIService {
   }
 
   /**
-   * Extract with retry logic (3 attempts with exponential backoff)
+   * Extract with retry logic (3 attempts with smart backoff for 429 errors)
    */
   private static async extractWithRetry(
     cvText: string,
@@ -110,8 +110,17 @@ export class AIService {
       console.error(`❌ Extraction attempt ${attempt} failed:`, error.message);
 
       if (attempt < maxAttempts) {
-        const delay = this.retryDelays[attempt - 1];
-        console.log(`⏳ Retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxAttempts})`);
+        // Check if this is a 429 rate limit error with retry-after header
+        let delay = this.retryDelays[attempt - 1];
+
+        if (error.retryAfter) {
+          // Use the exact retry-after time from Anthropic API
+          delay = error.retryAfter * 1000; // Convert seconds to milliseconds
+          console.log(`⏱️  Rate limit hit. API says retry after ${error.retryAfter}s... (attempt ${attempt + 1}/${maxAttempts})`);
+        } else {
+          console.log(`⏳ Retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxAttempts})`);
+        }
+
         await this.sleep(delay);
         return this.extractWithRetry(cvText, attempt + 1);
       }
@@ -211,9 +220,11 @@ CRITICAL INSTRUCTIONS:
    - For current positions, use "Present" as end date (example: "01/2022 - Present")
    - List most recent position first
 
-3. EDUCATION (ALL entries)
+3. EDUCATION (ALL entries, or empty array if none)
    - Extract: institution name, degree/program name, and dates
-   - Date format REQUIRED: YYYY - YYYY (example: "2018 - 2020")
+   - If no education information is found, return empty array: []
+   - Degree field is OPTIONAL - omit if not specified
+   - Date format: YYYY - YYYY (example: "2018 - 2020")
    - If dates missing, omit the dates field entirely
    - Include all education entries (no limit)
 
@@ -334,6 +345,20 @@ ${cvText}`;
       console.error('❌ Anthropic API Error Response:', errorText);
       console.error('❌ Response Status:', response.status, response.statusText);
       console.error('❌ Response Headers:', Object.fromEntries(response.headers.entries()));
+
+      // For 429 rate limit errors, capture the retry-after header
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('retry-after');
+        const error: any = new Error(`Anthropic API request failed: ${response.status} ${response.statusText}`);
+
+        if (retryAfter) {
+          error.retryAfter = parseInt(retryAfter, 10);
+          console.warn(`⚠️  Rate limit exceeded. Retry after ${retryAfter} seconds.`);
+        }
+
+        throw error;
+      }
+
       throw new Error(`Anthropic API request failed: ${response.status} ${response.statusText}`);
     }
 
