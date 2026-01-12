@@ -131,7 +131,7 @@ export class SlideGenerator {
         shrinkToFitMin: 6,  // Minimum font size when shrinking (prevents tiny text)
         wrap: true,
         valign: 'top',
-        lineSpacing: 12,
+        lineSpacing: 1,
         margin: 0  // Remove default padding to prevent coordinate shifting
       });
     }
@@ -150,6 +150,7 @@ export class SlideGenerator {
       bold: true,
       wrap: true,
       valign: 'top',
+      lineSpacing: 1,
       margin: 0  // Remove default padding to prevent coordinate shifting
     });
 
@@ -167,6 +168,7 @@ export class SlideGenerator {
       shrinkToFitMin: 6,  // Minimum font size when shrinking
       wrap: true,
       valign: 'top',
+      lineSpacing: 1,
       margin: 0  // Remove default padding to prevent coordinate shifting
     });
   }
