@@ -131,7 +131,8 @@ export class SlideGenerator {
         shrinkToFitMin: 6,  // Minimum font size when shrinking (prevents tiny text)
         wrap: true,
         valign: 'top',
-        lineSpacing: 12
+        lineSpacing: 12,
+        margin: 0  // Remove default padding to prevent coordinate shifting
       });
     }
 
@@ -148,7 +149,8 @@ export class SlideGenerator {
       color: this.hexToRgb(colors.name),
       bold: true,
       wrap: true,
-      valign: 'top'
+      valign: 'top',
+      margin: 0  // Remove default padding to prevent coordinate shifting
     });
 
     // B. WORK HISTORY (Bulleted List below name)
@@ -164,7 +166,8 @@ export class SlideGenerator {
       fit: 'shrink',  // Dynamic sizing - shrinks to fit content
       shrinkToFitMin: 6,  // Minimum font size when shrinking
       wrap: true,
-      valign: 'top'
+      valign: 'top',
+      margin: 0  // Remove default padding to prevent coordinate shifting
     });
   }
 
