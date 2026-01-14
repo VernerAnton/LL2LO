@@ -50,7 +50,7 @@ interface AIResponse {
 export class AIService {
   private static apiKey: string | null = null;
   private static provider: AiProvider = 'anthropic';
-  private static anthropicModel: AnthropicModel = 'claude-sonnet-4-5';
+  private static anthropicModel: AnthropicModel = 'claude-sonnet-4-5-20250929';
   private static retryDelays: number[] = [2000, 4000, 8000]; // 2s, 4s, 8s
 
   /**
