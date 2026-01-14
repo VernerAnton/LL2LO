@@ -107,19 +107,19 @@ export class SlideGenerator {
       : 'No operational experience found (board positions filtered)';
 
     // 2. Education: Format Education array
-    // Institution on its own line (ALL CAPS for prominence, with >>> prefix for VBA bolding)
+    // Institution with >>> prefix for VBA macro to identify and format (bold, capitalize, etc.)
     // >>> prefix allows PowerPoint VBA macro to identify and bold institution names
     const educationText = candidate.education
       .map(e => {
         const dateStr = e.dates ? ` · (${e.dates})` : '';
         const degree = e.degree || 'Degree not specified';
-        return `>>>${e.institution.toUpperCase()}\n• ${degree}${dateStr}`;
+        return `>>>${e.institution}\n• ${degree}${dateStr}`;
       })
       .join('\n');
 
     // --- LEFT COLUMN: EDUCATION ---
     // Starts at 10pt, automatically shrinks if content is too long (min 6pt)
-    // Institution names are in ALL CAPS for visual prominence
+    // Institution names have >>> prefix for VBA macro formatting
     if (educationText) {
       slide.addText(educationText, {
         x: slot.education.x,
