@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { ThemeToggle } from './components/ThemeToggle';
 import { LlmKeyInput } from './components/LlmKeyInput';
@@ -37,6 +37,9 @@ function App() {
 
   const [justReset, setJustReset] = useState(false);
   const [fileUploaderKey, setFileUploaderKey] = useState(0);
+
+  // Ref to track if extraction should be cancelled
+  const cancelExtractionRef = useRef(false);
 
   // Initialize AIService with saved values
   useEffect(() => {
@@ -113,6 +116,9 @@ function App() {
   };
 
   const handleReset = () => {
+    // Cancel any ongoing extraction
+    cancelExtractionRef.current = true;
+
     setUploadedFiles([]);
     setParsedCVs([]);
     setExtractedCandidates([]);
@@ -127,6 +133,11 @@ function App() {
     setTimeout(() => setJustReset(false), 1500);
   };
 
+  const handleStopExtraction = () => {
+    cancelExtractionRef.current = true;
+    setProcessingStatus('idle');
+  };
+
   const handleParsePDF = async () => {
     if (uploadedFiles.length === 0) {
       alert('Please upload at least one PDF file first');
@@ -137,6 +148,9 @@ function App() {
       alert('Please enter your API key first');
       return;
     }
+
+    // Reset cancellation flag
+    cancelExtractionRef.current = false;
 
     try {
       setProcessingStatus('parsing');
@@ -173,6 +187,13 @@ function App() {
       let cumulativeTokens = 0;
 
       for (let i = 0; i < allCVs.length; i += concurrencyLevel) {
+        // Check if extraction was cancelled
+        if (cancelExtractionRef.current) {
+          console.log('⏹️ Extraction cancelled by user');
+          setProcessingStatus('idle');
+          break;
+        }
+
         const batch = allCVs.slice(i, i + concurrencyLevel);
         const batchPromises = batch.map(async (cv, batchIndex) => {
           const globalIndex = i + batchIndex;
@@ -361,31 +382,50 @@ function App() {
           marginBottom: '1.5rem',
           textAlign: 'center'
         }}>
-          <button
-            onClick={handleParsePDF}
-            disabled={!canProcess}
-            style={{
-              padding: '1rem 2rem',
-              background: 'none',
-              border: `2px solid ${borderColor}`,
-              color: textColor,
-              fontFamily: 'Courier New, monospace',
-              fontWeight: 'bold',
-              cursor: canProcess ? 'pointer' : 'not-allowed',
-              letterSpacing: '0.1em',
-              fontSize: '1rem',
-              opacity: canProcess ? 1 : 0.5
-            }}
-          >
-            [ 🚀 PROCESS CVs ]
-          </button>
+          {processingStatus === 'extracting' ? (
+            <button
+              onClick={handleStopExtraction}
+              style={{
+                padding: '1rem 2rem',
+                background: 'none',
+                border: `2px solid #ff6b6b`,
+                color: '#ff6b6b',
+                fontFamily: 'Courier New, monospace',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                letterSpacing: '0.1em',
+                fontSize: '1rem'
+              }}
+            >
+              [ ⏹️ STOP EXTRACTION ]
+            </button>
+          ) : (
+            <button
+              onClick={handleParsePDF}
+              disabled={!canProcess}
+              style={{
+                padding: '1rem 2rem',
+                background: 'none',
+                border: `2px solid ${borderColor}`,
+                color: textColor,
+                fontFamily: 'Courier New, monospace',
+                fontWeight: 'bold',
+                cursor: canProcess ? 'pointer' : 'not-allowed',
+                letterSpacing: '0.1em',
+                fontSize: '1rem',
+                opacity: canProcess ? 1 : 0.5
+              }}
+            >
+              [ 🚀 PROCESS CVs ]
+            </button>
+          )}
           <div style={{
             fontSize: '0.75rem',
             opacity: 0.6,
             marginTop: '0.5rem',
             color: textColor
           }}>
-            Parse PDF(s) + Extract with AI
+            {processingStatus === 'extracting' ? 'Stop the current extraction' : 'Parse PDF(s) + Extract with AI'}
           </div>
         </div>
       )}
