@@ -137,9 +137,9 @@ export class AIService {
    */
   private static calculateCost(inputTokens: number, outputTokens: number): number {
     const pricing: Record<string, { input: number; output: number }> = {
-      // Anthropic (per 1M tokens)
-      'claude-haiku-4-5': { input: 0.25, output: 1.25 },
-      'claude-sonnet-4-5': { input: 3.00, output: 15.00 },
+      // Anthropic Claude 4.5 (per 1M tokens)
+      'claude-haiku-4-5-20251001': { input: 0.25, output: 1.25 },
+      'claude-sonnet-4-5-20250929': { input: 3.00, output: 15.00 },
       'claude-opus-4-5-20251101': { input: 15.00, output: 75.00 },
       // OpenAI (per 1M tokens)
       'gpt-4-turbo': { input: 10.00, output: 30.00 },
