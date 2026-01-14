@@ -1,5 +1,5 @@
 // Rate limiter for API calls to avoid hitting quotas
-// Gemini free tier: 10 RPM (requests per minute)
+// Anthropic free tier: 50 RPM (requests per minute)
 
 interface QueuedRequest<T> {
   fn: () => Promise<T>;

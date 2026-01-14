@@ -484,6 +484,3 @@ ${cvText}`;
     return rateLimiter.getQueueLength();
   }
 }
-
-// Keep GeminiService as an alias for backwards compatibility during migration
-export const GeminiService = AIService;
