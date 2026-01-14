@@ -434,10 +434,10 @@ ${cvText}`;
    */
   private static cleanEducation(education: any[]): Education[] {
     return education
-      .filter((item) => item.institution && item.degree)
+      .filter((item) => item.institution) // Only require institution, degree is optional
       .map((item) => ({
         institution: String(item.institution).trim(),
-        degree: String(item.degree).trim(),
+        degree: item.degree ? String(item.degree).trim() : undefined, // Handle optional degree
         dates: item.dates ? String(item.dates).trim() : undefined,
       }));
   }

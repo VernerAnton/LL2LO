@@ -28,8 +28,8 @@ export interface WorkExperience {
 }
 
 export interface Education {
-  degree: string;
   institution: string;
+  degree?: string; // Degree is optional - some candidates may not list one
   dates?: string; // Format: "MM/YYYY - MM/YYYY"
 }
 
