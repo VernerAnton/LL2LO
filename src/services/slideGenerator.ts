@@ -111,9 +111,13 @@ export class SlideGenerator {
     // >>> prefix allows PowerPoint VBA macro to identify and bold institution names
     const educationText = candidate.education
       .map(e => {
-        const dateStr = e.dates ? ` · (${e.dates})` : '';
-        const degree = e.degree || 'Degree not specified';
-        return `>>>${e.institution}\n• ${degree}${dateStr}`;
+        if (e.degree) {
+          const dateStr = e.dates ? ` · (${e.dates})` : '';
+          return `>>>${e.institution}\n• ${e.degree}${dateStr}`;
+        } else {
+          // No degree - just show institution
+          return `>>>${e.institution}`;
+        }
       })
       .join('\n');
 
