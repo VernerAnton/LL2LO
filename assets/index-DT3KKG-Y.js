@@ -229,15 +229,15 @@ CRITICAL INSTRUCTIONS:
    - ONLY include operational/employment positions where the person actively worked (CEO, CTO, Manager, Engineer, etc.)
    - If someone has both operational and board roles, ONLY include the operational ones
    - Extract: company name, job title, and dates
-   - Date format REQUIRED: MM/YYYY - MM/YYYY (example: "03/2020 - 08/2023")
-   - For current positions, use "Present" as end date (example: "01/2022 - Present")
+   - Date format: Use MM/YYYY - MM/YYYY if months are available (example: "03/2020 - 08/2023"), or YYYY - YYYY if only years (example: "2020 - 2023")
+   - For current positions, use "Present" as end date (example: "01/2022 - Present" or "2022 - Present")
    - List most recent position first
 
 3. EDUCATION (ALL entries, or empty array if none)
    - Extract: institution name, degree/program name, and dates
    - If no education information is found, return empty array: []
    - Degree field is OPTIONAL - omit if not specified
-   - Date format: YYYY - YYYY (example: "2018 - 2020")
+   - Date format: Use MM/YYYY - MM/YYYY if months are available, or YYYY - YYYY if only years (example: "2018 - 2020")
    - If dates missing, omit the dates field entirely
    - Include all education entries (no limit)
 
@@ -248,14 +248,14 @@ REQUIRED OUTPUT FORMAT (JSON only, no other text):
     {
       "company": "Company Name",
       "jobTitle": "Job Title",
-      "dates": "MM/YYYY - MM/YYYY"
+      "dates": "MM/YYYY - MM/YYYY" or "YYYY - YYYY"
     }
   ],
   "education": [
     {
       "institution": "Institution Name",
       "degree": "Degree/Program Name",
-      "dates": "YYYY - YYYY"
+      "dates": "YYYY - YYYY" or "MM/YYYY - MM/YYYY"
     }
   ]
 }
