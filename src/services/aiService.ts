@@ -50,7 +50,7 @@ interface AIResponse {
 export class AIService {
   private static apiKey: string | null = null;
   private static provider: AiProvider = 'anthropic';
-  private static anthropicModel: AnthropicModel = 'claude-sonnet-4-5';
+  private static anthropicModel: AnthropicModel = 'claude-sonnet-4-5-20250929';
   private static retryDelays: number[] = [2000, 4000, 8000]; // 2s, 4s, 8s
 
   /**
@@ -137,9 +137,9 @@ export class AIService {
    */
   private static calculateCost(inputTokens: number, outputTokens: number): number {
     const pricing: Record<string, { input: number; output: number }> = {
-      // Anthropic (per 1M tokens)
-      'claude-haiku-4-5': { input: 0.25, output: 1.25 },
-      'claude-sonnet-4-5': { input: 3.00, output: 15.00 },
+      // Anthropic Claude 4.5 (per 1M tokens)
+      'claude-haiku-4-5-20251001': { input: 0.25, output: 1.25 },
+      'claude-sonnet-4-5-20250929': { input: 3.00, output: 15.00 },
       'claude-opus-4-5-20251101': { input: 15.00, output: 75.00 },
       // OpenAI (per 1M tokens)
       'gpt-4-turbo': { input: 10.00, output: 30.00 },
@@ -216,8 +216,8 @@ CRITICAL INSTRUCTIONS:
    - ONLY include operational/employment positions where the person actively worked (CEO, CTO, Manager, Engineer, etc.)
    - If someone has both operational and board roles, ONLY include the operational ones
    - Extract: company name, job title, and dates
-   - Date format REQUIRED: MM/YYYY - MM/YYYY (example: "03/2020 - 08/2023")
-   - For current positions, use "Present" as end date (example: "01/2022 - Present")
+   - Date format: Use MM/YYYY - MM/YYYY if months are available (example: "03/2020 - 08/2023"), or YYYY - YYYY if only years (example: "2020 - 2023")
+   - For current positions, use "Present" as end date (example: "01/2022 - Present" or "2022 - Present")
    - List most recent position first
 
 3. EDUCATION (Only entries with degrees)
@@ -225,7 +225,7 @@ CRITICAL INSTRUCTIONS:
    - ONLY include education entries that have a degree/program listed
    - EXCLUDE entries that only show institution without a degree
    - If no education with degrees is found, return empty array: []
-   - Date format: YYYY - YYYY (example: "2018 - 2020")
+   - Date format: Use MM/YYYY - MM/YYYY if months are available, or YYYY - YYYY if only years (example: "2018 - 2020")
    - If dates missing, omit the dates field entirely
 
 REQUIRED OUTPUT FORMAT (JSON only, no other text):
@@ -235,14 +235,14 @@ REQUIRED OUTPUT FORMAT (JSON only, no other text):
     {
       "company": "Company Name",
       "jobTitle": "Job Title",
-      "dates": "MM/YYYY - MM/YYYY"
+      "dates": "MM/YYYY - MM/YYYY" or "YYYY - YYYY"
     }
   ],
   "education": [
     {
       "institution": "Institution Name",
       "degree": "Degree/Program Name",
-      "dates": "YYYY - YYYY"
+      "dates": "YYYY - YYYY" or "MM/YYYY - MM/YYYY"
     }
   ]
 }
@@ -434,10 +434,10 @@ ${cvText}`;
    */
   private static cleanEducation(education: any[]): Education[] {
     return education
-      .filter((item) => item.institution && item.degree)
+      .filter((item) => item.institution) // Only require institution, degree is optional
       .map((item) => ({
         institution: String(item.institution).trim(),
-        degree: String(item.degree).trim(),
+        degree: item.degree ? String(item.degree).trim() : undefined, // Handle optional degree
         dates: item.dates ? String(item.dates).trim() : undefined,
       }));
   }
@@ -484,6 +484,3 @@ ${cvText}`;
     return rateLimiter.getQueueLength();
   }
 }
-
-// Keep GeminiService as an alias for backwards compatibility during migration
-export const GeminiService = AIService;
