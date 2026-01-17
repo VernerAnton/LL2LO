@@ -15,14 +15,14 @@ const WorkExperienceSchema = z.object({
 
 const EducationSchema = z.object({
   institution: z.string().min(1, 'Institution name is required'),
-  degree: z.string().optional(), // Degree is optional - some people don't have education on LinkedIn
+  degree: z.string().min(1, 'Degree is required'), // Degree is required - entries without degrees are filtered out
   dates: z.string().optional(),
 });
 
 const CVDataSchema = z.object({
   name: z.string().min(1, 'Candidate name is required'),
   workHistory: z.array(WorkExperienceSchema).max(5, 'Maximum 5 work experiences'),
-  education: z.array(EducationSchema).optional().default([]), // Education can be completely empty
+  education: z.array(EducationSchema).optional().default([]), // Education array can be empty if no degrees found
 });
 
 export interface TokenUsage {
@@ -220,13 +220,13 @@ CRITICAL INSTRUCTIONS:
    - For current positions, use "Present" as end date (example: "01/2022 - Present" or "2022 - Present")
    - List most recent position first
 
-3. EDUCATION (ALL entries, or empty array if none)
+3. EDUCATION (Only entries with degrees)
    - Extract: institution name, degree/program name, and dates
-   - If no education information is found, return empty array: []
-   - Degree field is OPTIONAL - omit if not specified
+   - ONLY include education entries that have a degree/program listed
+   - EXCLUDE entries that only show institution without a degree
+   - If no education with degrees is found, return empty array: []
    - Date format: Use MM/YYYY - MM/YYYY if months are available, or YYYY - YYYY if only years (example: "2018 - 2020")
    - If dates missing, omit the dates field entirely
-   - Include all education entries (no limit)
 
 REQUIRED OUTPUT FORMAT (JSON only, no other text):
 {
