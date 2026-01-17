@@ -444,7 +444,7 @@ function App() {
                 <div style={{ fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '0.25rem', color: textColor, opacity: 0.8 }}>EDUCATION:</div>
                 {candidate.education.map((edu, eIdx) => (
                   <div key={eIdx} style={{ fontSize: '0.75rem', marginLeft: '1rem', marginBottom: '0.25rem', color: textColor, opacity: 0.7 }}>
-                    • {edu.degree ? `${edu.degree} from ` : ''}{edu.institution} {edu.dates && `(${edu.dates})`}
+                    • {edu.degree} from {edu.institution} {edu.dates && `(${edu.dates})`}
                   </div>
                 ))}
               </div>
