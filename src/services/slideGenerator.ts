@@ -43,7 +43,10 @@ export class SlideGenerator {
       // 2. Define slide master with template background image
       this.defineTemplateMaster(prs);
 
-      // 3. Process Candidates in Batches of 4
+      // 3. Add First Slide (title/intro slide with text box)
+      this.addFirstSlide(prs);
+
+      // 4. Process Candidates in Batches of 4
       const totalSlides = Math.ceil(candidates.length / 4);
       let slideCount = 0;
 
@@ -62,7 +65,10 @@ export class SlideGenerator {
         });
       }
 
-      // 5. Save with descriptive filename
+      // 5. Add Last Slide (conclusion/outro slide)
+      this.addLastSlide(prs);
+
+      // 6. Save with descriptive filename
       const filename = `Candidates_${candidates.length}_${new Date().toISOString().slice(0, 10)}.pptx`;
       console.log(`💾 Saving presentation: ${filename}`);
       await prs.writeFile({ fileName: filename });
@@ -190,6 +196,65 @@ export class SlideGenerator {
     });
 
     console.log('✅ Slide master defined with template background image');
+  }
+
+  /**
+   * Add first slide with background image and text box
+   * Text box contains: "LONGLIST", "Job Title", "Date" (right-aligned, each on own line)
+   */
+  private static addFirstSlide(prs: any): void {
+    const slide = prs.addSlide();
+
+    // Add background image (full slide)
+    slide.addImage({
+      path: 'public/assets/first-slide.png',
+      x: 0,
+      y: 0,
+      w: '100%',
+      h: '100%'
+    });
+
+    // Add text box with placeholder content
+    // Measurements converted from cm to inches:
+    // X: 6.91 cm = 2.72 inches
+    // Y: 13.98 cm = 5.50 inches
+    // Width: 10.48 cm = 4.13 inches
+    // Height: 3.16 cm = 1.24 inches
+    const textContent = 'LONGLIST\nJob Title\nDate';
+
+    slide.addText(textContent, {
+      x: 2.72,
+      y: 5.50,
+      w: 4.13,
+      h: 1.24,
+      align: 'right',
+      valign: 'top',
+      fontSize: 18,
+      bold: true,
+      color: '000000',
+      wrap: true,
+      margin: 0
+    });
+
+    console.log('✅ First slide added with background and text box');
+  }
+
+  /**
+   * Add last slide with background image only (no text boxes)
+   */
+  private static addLastSlide(prs: any): void {
+    const slide = prs.addSlide();
+
+    // Add background image (full slide)
+    slide.addImage({
+      path: 'public/assets/last-slide.png',
+      x: 0,
+      y: 0,
+      w: '100%',
+      h: '100%'
+    });
+
+    console.log('✅ Last slide added with background image');
   }
 
   /**
