@@ -200,17 +200,23 @@ export function LlmKeyInput({
 
           {/* Extended Thinking Toggle */}
           <div style={{ marginTop: '0.75rem' }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '0.75rem',
-                marginBottom: '0.5rem',
-                opacity: 0.8,
-                color: textColor,
-              }}
-            >
-              EXTENDED THINKING:
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <label
+                style={{
+                  fontSize: '0.75rem',
+                  opacity: 0.8,
+                  color: textColor,
+                }}
+              >
+                EXTENDED THINKING:
+              </label>
+              <span
+                title="Enables deeper reasoning before extracting CV data. Recommended for personal CVs with unusual formatting, non-standard date formats, or ambiguous role titles. Has no benefit for clean, consistently-formatted exports. Increases token usage (~8K extra tokens per CV)."
+                style={{ cursor: 'help', fontSize: '0.75rem', opacity: 0.6, color: textColor }}
+              >
+                ⓘ
+              </span>
+            </div>
             <button
               onClick={() => onExtendedThinkingChange(!extendedThinking)}
               style={{
