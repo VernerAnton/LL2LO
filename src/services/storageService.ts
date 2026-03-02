@@ -58,18 +58,20 @@ export class StorageService {
 
   /**
    * Get Anthropic model preference from localStorage
-   * Defaults to 'claude-sonnet-4-5-20250929' (balanced performance/cost)
+   * Defaults to 'claude-sonnet-4-6' (latest balanced model)
    */
   static getAnthropicModel(): AnthropicModel {
     const stored = localStorage.getItem(STORAGE_KEYS.ANTHROPIC_MODEL);
     const validModels: AnthropicModel[] = [
       'claude-haiku-4-5-20251001',
+      'claude-sonnet-4-6',
+      'claude-opus-4-6',
       'claude-sonnet-4-5-20250929',
-      'claude-opus-4-5-20251101'
+      'claude-opus-4-5-20251101',
     ];
     return validModels.includes(stored as AnthropicModel)
       ? (stored as AnthropicModel)
-      : 'claude-sonnet-4-5-20250929';
+      : 'claude-sonnet-4-6';
   }
 
   /**

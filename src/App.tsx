@@ -20,6 +20,7 @@ function App() {
   const [apiKey, setApiKey] = useState<string | null>(() => StorageService.getApiKey());
   const [aiProvider, setAiProvider] = useState<AiProvider>(() => StorageService.getAiProvider());
   const [anthropicModel, setAnthropicModel] = useState<AnthropicModel>(() => StorageService.getAnthropicModel());
+  const [extendedThinking, setExtendedThinking] = useState(false);
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>('idle');
@@ -48,7 +49,8 @@ function App() {
     }
     AIService.setProvider(aiProvider);
     AIService.setAnthropicModel(anthropicModel);
-  }, [apiKey, aiProvider, anthropicModel]);
+    AIService.setExtendedThinking(extendedThinking);
+  }, [apiKey, aiProvider, anthropicModel, extendedThinking]);
 
   useEffect(() => {
     document.body.className = `${actualTheme}-mode`;
@@ -100,6 +102,11 @@ function App() {
     setAnthropicModel(model);
     StorageService.saveAnthropicModel(model);
     AIService.setAnthropicModel(model);
+  };
+
+  const handleExtendedThinkingChange = (enabled: boolean) => {
+    setExtendedThinking(enabled);
+    AIService.setExtendedThinking(enabled);
   };
 
   const handleConcurrencyChange = (level: ConcurrencyLevel) => {
@@ -284,10 +291,12 @@ function App() {
         existingKey={apiKey}
         provider={aiProvider}
         anthropicModel={anthropicModel}
+        extendedThinking={extendedThinking}
         onSave={handleSaveApiKey}
         onRemove={handleRemoveApiKey}
         onProviderChange={handleProviderChange}
         onModelChange={handleModelChange}
+        onExtendedThinkingChange={handleExtendedThinkingChange}
         theme={actualTheme}
       />
 
