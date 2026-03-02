@@ -50,7 +50,8 @@ interface AIResponse {
 export class AIService {
   private static apiKey: string | null = null;
   private static provider: AiProvider = 'anthropic';
-  private static anthropicModel: AnthropicModel = 'claude-sonnet-4-5-20250929';
+  private static anthropicModel: AnthropicModel = 'claude-sonnet-4-6';
+  private static extendedThinking: boolean = false;
   private static retryDelays: number[] = [2000, 4000, 8000]; // 2s, 4s, 8s
 
   /**
@@ -75,6 +76,14 @@ export class AIService {
   static setAnthropicModel(model: AnthropicModel): void {
     this.anthropicModel = model;
     console.log(`🔧 Anthropic Model set to: ${model}`);
+  }
+
+  /**
+   * Enable or disable extended thinking for deeper reasoning
+   */
+  static setExtendedThinking(enabled: boolean): void {
+    this.extendedThinking = enabled;
+    console.log(`🔧 Extended Thinking: ${enabled ? 'enabled' : 'disabled'}`);
   }
 
   /**
@@ -137,10 +146,13 @@ export class AIService {
    */
   private static calculateCost(inputTokens: number, outputTokens: number): number {
     const pricing: Record<string, { input: number; output: number }> = {
-      // Anthropic Claude 4.5 (per 1M tokens)
-      'claude-haiku-4-5-20251001': { input: 0.25, output: 1.25 },
+      // Anthropic Claude 4.6 (per 1M tokens)
+      'claude-haiku-4-5-20251001': { input: 1.00, output: 5.00 },
+      'claude-sonnet-4-6': { input: 3.00, output: 15.00 },
+      'claude-opus-4-6': { input: 5.00, output: 25.00 },
+      // Anthropic Claude 4.5 legacy (per 1M tokens)
       'claude-sonnet-4-5-20250929': { input: 3.00, output: 15.00 },
-      'claude-opus-4-5-20251101': { input: 15.00, output: 75.00 },
+      'claude-opus-4-5-20251101': { input: 5.00, output: 25.00 },
       // OpenAI (per 1M tokens)
       'gpt-4-turbo': { input: 10.00, output: 30.00 },
       'gpt-4': { input: 30.00, output: 60.00 },
@@ -318,6 +330,27 @@ ${cvText}`;
     console.log(`🤖 Calling Anthropic API (${this.anthropicModel}) directly from browser...`);
     console.log(`🔑 API Key prefix: ${this.apiKey?.substring(0, 15)}...`);
 
+    // Extended thinking requires temperature=1 and higher max_tokens to accommodate thinking budget
+    const thinkingBudget = 8000;
+    const requestBody: Record<string, any> = {
+      model: this.anthropicModel,
+      max_tokens: this.extendedThinking ? thinkingBudget + 2048 : 2048,
+      system: 'You are a helpful assistant that extracts structured data from CVs. Always respond with valid JSON only, no additional text or explanations.',
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+    };
+
+    if (this.extendedThinking) {
+      requestBody.thinking = { type: 'enabled', budget_tokens: thinkingBudget };
+      // temperature must be 1 (or omitted) when extended thinking is enabled
+    } else {
+      requestBody.temperature = 0.1;
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -326,18 +359,7 @@ ${cvText}`;
         'anthropic-dangerous-direct-browser-access': 'true',  // Enable CORS for browser calls
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: this.anthropicModel,
-        max_tokens: 2048,
-        temperature: 0.1,
-        system: 'You are a helpful assistant that extracts structured data from CVs. Always respond with valid JSON only, no additional text or explanations.',
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -364,8 +386,14 @@ ${cvText}`;
 
     const data = await response.json();
 
-    if (!data.content || !data.content[0]?.text) {
+    if (!data.content || !Array.isArray(data.content)) {
       throw new Error('Invalid response structure from Anthropic API');
+    }
+
+    // Find the text block — when extended thinking is enabled, thinking blocks come first
+    const textBlock = data.content.find((block: any) => block.type === 'text');
+    if (!textBlock?.text) {
+      throw new Error('No text content in Anthropic API response');
     }
 
     if (!data.usage) {
@@ -373,7 +401,7 @@ ${cvText}`;
     }
 
     return {
-      text: data.content[0].text,
+      text: textBlock.text,
       usage: {
         inputTokens: data.usage.input_tokens || 0,
         outputTokens: data.usage.output_tokens || 0,

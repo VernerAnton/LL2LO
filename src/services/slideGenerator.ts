@@ -207,7 +207,7 @@ export class SlideGenerator {
 
     // Add background image (full slide)
     slide.addImage({
-      path: 'public/assets/first-slide.png',
+      path: 'assets/first-slide.png',
       x: 0,
       y: 0,
       w: '100%',
@@ -247,7 +247,7 @@ export class SlideGenerator {
 
     // Add background image (full slide)
     slide.addImage({
-      path: 'public/assets/last-slide.png',
+      path: 'assets/last-slide.png',
       x: 0,
       y: 0,
       w: '100%',
