@@ -230,6 +230,7 @@ CRITICAL INSTRUCTIONS:
    - Extract: company name, job title, and dates
    - Date format: Use MM/YYYY - MM/YYYY if months are available (example: "03/2020 - 08/2023"), or YYYY - YYYY if only years (example: "2020 - 2023")
    - For current positions, use "Present" as end date (example: "01/2022 - Present" or "2022 - Present")
+   - If dates are not present in the CV, omit the dates field entirely — do NOT guess or invent dates
    - List most recent position first
 
 3. EDUCATION (Only entries with degrees)
