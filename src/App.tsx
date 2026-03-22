@@ -439,6 +439,23 @@ function App() {
         </div>
       )}
 
+      {failedExtractions.length > 0 && (
+        <div style={{
+          padding: '1.5rem',
+          border: `2px solid #ff6b6b`,
+          background: bgColor,
+          boxShadow: `4px 4px 0px #ff6b6b`,
+          marginBottom: '1.5rem'
+        }}>
+          {failedExtractions.map((error, index) => (
+            <div key={index} style={{ padding: '1rem', border: `1px solid #ff6b6b`, marginBottom: '0.5rem', background: actualTheme === 'dark' ? '#1a1a1a' : '#fff' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: textColor }}>CV {error.candidateIndex + 1}</div>
+              <div style={{ fontSize: '0.75rem', color: '#ff6b6b' }}>Error: {error.error}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {extractedCandidates.length > 0 && (
         <GenerateButton
           candidates={extractedCandidates}
@@ -507,23 +524,6 @@ function App() {
           candidates={extractedCandidates}
           theme={actualTheme}
         />
-      )}
-
-      {failedExtractions.length > 0 && (
-        <div style={{
-          padding: '1.5rem',
-          border: `2px solid #ff6b6b`,
-          background: bgColor,
-          boxShadow: `4px 4px 0px #ff6b6b`,
-          marginBottom: '1.5rem'
-        }}>
-          {failedExtractions.map((error, index) => (
-            <div key={index} style={{ padding: '1rem', border: `1px solid #ff6b6b`, marginBottom: '0.5rem', background: actualTheme === 'dark' ? '#1a1a1a' : '#fff' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: textColor }}>CV {error.candidateIndex + 1}</div>
-              <div style={{ fontSize: '0.75rem', color: '#ff6b6b' }}>Error: {error.error}</div>
-            </div>
-          ))}
-        </div>
       )}
 
       <div className="footer">
