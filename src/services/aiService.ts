@@ -15,7 +15,7 @@ const WorkExperienceSchema = z.object({
 
 const EducationSchema = z.object({
   institution: z.string().min(1, 'Institution name is required'),
-  degree: z.string().min(1, 'Degree is required'), // Degree is required - entries without degrees are filtered out
+  degree: z.string().optional(), // Optional - formal degrees, exchange programs (e.g. Erasmus), and significant certificates are all valid
   dates: z.string().optional(),
 });
 
@@ -233,11 +233,12 @@ CRITICAL INSTRUCTIONS:
    - If dates are not present in the CV, omit the dates field entirely — do NOT guess or invent dates
    - List most recent position first
 
-3. EDUCATION (Only entries with degrees)
-   - Extract: institution name, degree/program name, and dates
-   - ONLY include education entries that have a degree/program listed
-   - EXCLUDE entries that only show institution without a degree
-   - If no education with degrees is found, return empty array: []
+3. EDUCATION
+   - INCLUDE: formal degrees (Bachelor, Master, MBA, PhD, etc.), significant certificate programs, and international exchange semesters (e.g. Erasmus, study abroad semesters)
+   - For exchange semesters or certificates that have no formal degree title, map the program or exchange name to the "degree" field (e.g. "Erasmus Exchange Semester", "Google Data Analytics Certificate")
+   - EXCLUDE: high school / secondary education, short online courses (< 3 months), and entries that list only an institution with no program or exchange specified
+   - Extract: institution name, degree/program/exchange name (if applicable), and dates
+   - If no qualifying education is found, return empty array: []
    - Date format: Use MM/YYYY - MM/YYYY if months are available, or YYYY - YYYY if only years (example: "2018 - 2020")
    - If dates missing, omit the dates field entirely
 
@@ -254,7 +255,7 @@ REQUIRED OUTPUT FORMAT (JSON only, no other text):
   "education": [
     {
       "institution": "Institution Name",
-      "degree": "Degree/Program Name",
+      "degree": "Degree/Program/Exchange Name (if applicable)",
       "dates": "YYYY - YYYY" or "MM/YYYY - MM/YYYY"
     }
   ]
